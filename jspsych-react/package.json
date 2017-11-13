@@ -1,9 +1,9 @@
 {
   "name": "jspsych-react",
-  "version": "0.0.1",
+  "version": "1.0.1",
   "description": "A simple React component for jspsych",
   "main": "dist/experiment.js",
-  "repository": "git@github.com:teonbrooks/p300-react.git",
+  "repository": "git@github.com:teonbrooks/jspsych-react.git",
   "scripts": {
     "build:dev": "webpack src/experiment.js dist/experiment.js --config tools/webpack.config.dev.js",
     "start": "node ./node_modules/webpack-dev-server/bin/webpack-dev-server.js",

@@ -8,26 +8,27 @@ jsPsych.plugins["html-keyboard-response"] = html_keyboard_response;
 
 export default class Experiment extends Component {
 
-  default_timeline = [{
-    type: "html-keyboard-response",
-    stimulus: "This is the default timeline."
-  }];
-
-
   constructor(props){
     super(props);
+    const default_timeline = [{
+      type: "html-keyboard-response",
+      stimulus: "This is the default timeline."
+    }];
+
     if (props.plugins) {
-      jsPsych.plugins.push(props.plugins)
+      jsPsych.plugins.push(props.plugins);
     }
 
     this.timeline = props.timeline || default_timeline;
     this.width = props.width || '100%';
     this.height = props.height || '100%';
     this.default_iti = props.default_iti || 3000;
-  }
+  };
 
   render() {
-    return (<div width={this.width} height={this.height} id="experiment"></div>)
+    return (
+      <div id="experiment" style={{'height': this.height, 'width': this.width}}></div>
+    );
   }
 
   componentDidMount() {
