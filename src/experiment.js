@@ -16,9 +16,9 @@ export default class Experiment extends Component {
     }];
 
     if (props.plugins) {
-      jsPsych.plugins.push(props.plugins);
-    }
-
+      Object.assign(jsPsych.plugins, props.plugins)
+    };
+  
     this.timeline = props.timeline || default_timeline;
     this.width = props.width || '100%';
     this.height = props.height || '100%';

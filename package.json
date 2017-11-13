@@ -1,11 +1,13 @@
 {
   "name": "jspsych-react",
-  "version": "0.0.2",
+  "version": "0.0.3",
   "description": "A simple React component for jspsych",
   "main": "dist/experiment.js",
   "repository": "git@github.com:teonbrooks/jspsych-react.git",
   "scripts": {
+    "build": "npm run clean && npm run build:dev",
     "build:dev": "webpack src/experiment.js dist/experiment.js --config tools/webpack.config.dev.js",
+    "clean": "rimraf dist build",
     "start": "node ./node_modules/webpack-dev-server/bin/webpack-dev-server.js",
     "test": "mocha --compilers js:babel-core/register --require ./test/test_helper.js --recursive ./test",
     "test:watch": "npm run test -- --watch"
@@ -29,6 +31,7 @@
     "jsdom": "^8.1.0",
     "mocha": "^2.4.5",
     "react-addons-test-utils": "^0.14.7",
+    "rimraf": "^2.5.0",
     "webpack": "^1.12.9",
     "webpack-dev-server": "^1.14.0"
   },
