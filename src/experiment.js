@@ -18,7 +18,8 @@ export default class Experiment extends Component {
     if (props.plugins) {
       Object.assign(jsPsych.plugins, props.plugins)
     };
-  
+
+    this.experimentDiv = null;
     this.timeline = props.timeline || default_timeline;
     this.width = props.width || '100%';
     this.height = props.height || '100%';
@@ -27,14 +28,17 @@ export default class Experiment extends Component {
 
   render() {
     return (
-      <div id="experiment" style={{'height': this.height, 'width': this.width}}></div>
+      <div id="experiment"
+           style={{'height': this.height, 'width': this.width}}
+           ref={(e) => { this.experimentDiv = e; }}
+      />
     );
   }
 
   componentDidMount() {
     /* start the experiment */
     jsPsych.init({
-      display_element: "experiment",
+      display_element: this.experimentDiv,
       timeline: this.timeline,
       default_iti: this.default_iti
     });
