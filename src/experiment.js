@@ -6,7 +6,7 @@ import html_keyboard_response from 'jspsych/plugins/jspsych-html-keyboard-respon
 // Import plugins
 jsPsych.plugins["html-keyboard-response"] = html_keyboard_response;
 
-export default class Experiment extends Component {
+class Experiment extends Component {
 
   constructor(props){
     super(props);
@@ -44,3 +44,5 @@ export default class Experiment extends Component {
     });
   }
 }
+
+export { jsPsych, Experiment };
