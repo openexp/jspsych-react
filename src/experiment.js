@@ -1,10 +1,8 @@
 import React, { Component } from 'react';
 import jsPsych from 'jspsych';
 import html_keyboard_response from 'jspsych/plugins/jspsych-html-keyboard-response';
+import image_keyboard_response from 'jspsych/plugins/jspsych-image-keyboard-response';
 
-
-// Import plugins
-jsPsych.plugins["html-keyboard-response"] = html_keyboard_response;
 
 class Experiment extends Component {
 
@@ -15,9 +13,13 @@ class Experiment extends Component {
       stimulus: "This is the default timeline."
     }];
 
-    if (props.plugins) {
-      Object.assign(jsPsych.plugins, props.plugins)
-    };
+    // Import plugins
+    const plugins = {
+    "html-keyboard-response": html_keyboard_response,
+    "image_keyboard_response": image_keyboard_response
+    }
+
+    Object.assign(jsPsych.plugins, plugins, props.plugins)
 
     this.experimentDiv = null;
     this.timeline = props.timeline || default_timeline;
