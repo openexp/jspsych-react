@@ -38,6 +38,20 @@ class Experiment extends Component {
   }
 
   componentDidMount() {
+    window.addEventListener('keyup', (e) => {
+      if (e.redispatched) { return }
+      let new_event = new e.constructor(e.type, e)
+      new_event.redispatched = true
+      this.experimentDiv.dispatchEvent(new_event)
+    }, true)
+
+    window.addEventListener('keydown', (e) => {
+      if (e.redispatched) { return }
+      let new_event = new e.constructor(e.type, e)
+      new_event.redispatched = true
+      this.experimentDiv.dispatchEvent(new_event)
+    }, true)
+
     /* start the experiment */
     jsPsych.init({
       display_element: this.experimentDiv,

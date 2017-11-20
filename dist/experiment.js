@@ -131,6 +131,26 @@ return /******/ (function(modules) { // webpackBootstrap
 	  }, {
 	    key: 'componentDidMount',
 	    value: function componentDidMount() {
+	      var _this3 = this;
+	
+	      window.addEventListener('keyup', function (e) {
+	        if (e.redispatched) {
+	          return;
+	        }
+	        var new_event = new e.constructor(e.type, e);
+	        new_event.redispatched = true;
+	        _this3.experimentDiv.dispatchEvent(new_event);
+	      }, true);
+	
+	      window.addEventListener('keydown', function (e) {
+	        if (e.redispatched) {
+	          return;
+	        }
+	        var new_event = new e.constructor(e.type, e);
+	        new_event.redispatched = true;
+	        _this3.experimentDiv.dispatchEvent(new_event);
+	      }, true);
+	
 	      /* start the experiment */
 	      _jspsych2.default.init({
 	        display_element: this.experimentDiv,
