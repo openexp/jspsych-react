@@ -4483,15 +4483,25 @@ return /******/ (function(modules) { // webpackBootstrap
 /* 32 */
 /***/ (function(module, exports, __webpack_require__) {
 
-	var __WEBPACK_AMD_DEFINE_FACTORY__, __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_DEFINE_RESULT__;/**
+	var __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_DEFINE_RESULT__;(function(root, factory) {
+	  if (true) {
+	    !(__WEBPACK_AMD_DEFINE_ARRAY__ = [], __WEBPACK_AMD_DEFINE_RESULT__ = function() {
+	    	return (root.jsPsych = factory());
+	    }.apply(exports, __WEBPACK_AMD_DEFINE_ARRAY__), __WEBPACK_AMD_DEFINE_RESULT__ !== undefined && (module.exports = __WEBPACK_AMD_DEFINE_RESULT__));
+	  } else if (typeof exports === 'object') {
+	    module.exports = factory();
+	  } else {
+	    root.jsPsych = factory();
+	  }
+	}(this, function() {
+	/**
 	 * jspsych.js
 	 * Josh de Leeuw
 	 *
 	 * documentation: docs.jspsych.org
 	 *
 	 **/
-	
-	var jsPsych = function () {
+	var jsPsych = (function() {
 	
 	  var core = {};
 	
@@ -4517,6 +4527,17 @@ return /******/ (function(modules) { // webpackBootstrap
 	  var waiting = false;
 	  // done loading?
 	  var loaded = false;
+	  var loadfail = false;
+	
+	  // storing a single webaudio context to prevent problems with multiple inits
+	  // of jsPsych
+	  core.webaudio_context = null;
+	  // temporary patch for Safari
+	  if (typeof window !== 'undefined' && window.hasOwnProperty('webkitAudioContext') && !window.hasOwnProperty('AudioContext')) {
+	    window.AudioContext = webkitAudioContext;
+	  }
+	  // end patch
+	  core.webaudio_context = (typeof window !== 'undefined' && typeof window.AudioContext !== 'undefined') ? new AudioContext() : null;
 	
 	  // enumerated variables for special parameter types
 	  core.ALL_KEYS = 'allkeys';
@@ -4540,6 +4561,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	    paused = false;
 	    waiting = false;
 	    loaded = false;
+	    loadfail = false;
 	    jsPsych.data.reset();
 	
 	    var defaults = {
@@ -4561,12 +4583,14 @@ return /******/ (function(modules) { // webpackBootstrap
 	      },
 	      'preload_images': [],
 	      'preload_audio': [],
+	      'use_webaudio': true,
 	      'exclusions': {},
 	      'show_progress_bar': false,
 	      'auto_update_progress_bar': true,
 	      'auto_preload': true,
 	      'show_preload_progress_bar': true,
 	      'max_load_time': 60000,
+	      'max_preload_attempts': 10,
 	      'default_iti': 0
 	    };
 	
@@ -4621,6 +4645,9 @@ return /******/ (function(modules) { // webpackBootstrap
 	      timeline: opts.timeline
 	    });
 	
+	    // initialize audio context based on options and browser capabilities
+	    jsPsych.pluginAPI.initAudio();
+	
 	    // below code resets event listeners that may have lingered from
 	    // a previous incomplete experiment loaded in same DOM.
 	    jsPsych.pluginAPI.reset(opts.display_element);
@@ -4638,8 +4665,8 @@ return /******/ (function(modules) { // webpackBootstrap
 	          jsPsych.pluginAPI.autoPreload(timeline, startExperiment, opts.preload_images, opts.preload_audio, opts.show_preload_progress_bar);
 	          if(opts.max_load_time > 0){
 	            setTimeout(function(){
-	              if(!loaded){
-	                loadFail();
+	              if(!loaded && !loadfail){
+	                core.loadFail();
 	              }
 	            }, opts.max_load_time);
 	          }
@@ -4714,7 +4741,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	    opts.on_data_update(trial_data_values);
 	
 	    // wait for iti
-	    if (typeof current_trial.post_trial_gap == 'undefined') {
+	    if (typeof current_trial.post_trial_gap === null) {
 	      if (opts.default_iti > 0) {
 	        setTimeout(nextTrial, opts.default_iti);
 	      } else {
@@ -4763,10 +4790,12 @@ return /******/ (function(modules) { // webpackBootstrap
 	
 	  core.addNodeToEndOfTimeline = function(new_timeline, preload_callback){
 	    timeline.insert(new_timeline);
-	    if(opts.auto_preload){
-	      jsPsych.pluginAPI.autoPreload(timeline, preload_callback);
-	    } else {
-	      preload_callback();
+	    if(typeof preload_callback !== 'undefinded'){
+	      if(opts.auto_preload){
+	        jsPsych.pluginAPI.autoPreload(timeline, preload_callback);
+	      } else {
+	        preload_callback();
+	      }
 	    }
 	  }
 	
@@ -4780,6 +4809,12 @@ return /******/ (function(modules) { // webpackBootstrap
 	      waiting = false;
 	      nextTrial();
 	    }
+	  }
+	
+	  core.loadFail = function(message){
+	    message = message || '<p>The experiment failed to load.</p>';
+	    loadfail = true;
+	    DOM_target.innerHTML = message;
 	  }
 	
 	  function TimelineNode(parameters, parent, relativeID) {
@@ -5258,9 +5293,6 @@ return /******/ (function(modules) { // webpackBootstrap
 	
 	  function doTrial(trial) {
 	
-	    // call experiment wide callback
-	    opts.on_trial_start(trial);
-	
 	    current_trial = trial;
 	
 	    // process all timeline variables for this trial
@@ -5272,8 +5304,21 @@ return /******/ (function(modules) { // webpackBootstrap
 	    // get default values for parameters
 	    setDefaultValues(trial);
 	
+	    // call experiment wide callback
+	    opts.on_trial_start(trial);
+	
+	    // call trial specific callback if it exists
+	    if(typeof trial.on_start == 'function'){
+	      trial.on_start(trial);
+	    }
+	
 	    // execute trial method
 	    jsPsych.plugins[trial.type].trial(DOM_target, trial);
+	
+	    // call trial specific loaded callback if it exists
+	    if(typeof trial.on_load == 'function'){
+	      trial.on_load();
+	    }
 	  }
 	
 	  function evaluateTimelineVariables(trial){
@@ -5285,7 +5330,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	        trial[keys[i]] = trial[keys[i]].call();
 	      }
 	      // timeline variables that are nested in objects
-	      if (typeof trial[keys[i]] == "object"){
+	      if (typeof trial[keys[i]] == "object" && trial[keys[i]] !== null){
 	        evaluateTimelineVariables(trial[keys[i]]);
 	      }
 	    }
@@ -5326,10 +5371,6 @@ return /******/ (function(modules) { // webpackBootstrap
 	        }
 	      }
 	    }
-	  }
-	
-	  function loadFail(){
-	    DOM_target.innerHTML = '<p>The experiment failed to load.</p>';
 	  }
 	
 	  function checkExclusions(exclusions, success, fail){
@@ -5406,7 +5447,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	  document.documentElement.setAttribute('jspsych', 'present');
 	
 	  return core;
-	}();
+	})();
 	
 	jsPsych.plugins = (function() {
 	
@@ -5436,16 +5477,28 @@ return /******/ (function(modules) { // webpackBootstrap
 	      default: {},
 	      description: 'Data to add to this trial (key-value pairs)'
 	    },
+	    on_start: {
+	      type: module.parameterType.FUNCTION,
+	      pretty_name: 'On start',
+	      default: function() { return; },
+	      description: 'Function to execute when trial begins'
+	    },
 	    on_finish: {
 	      type: module.parameterType.FUNCTION,
 	      pretty_name: 'On finish',
 	      default: function() { return; },
 	      description: 'Function to execute when trial is finished'
 	    },
+	    on_load: {
+	      type: module.parameterType.FUNCTION,
+	      pretty_name: 'On load',
+	      default: function() { return; },
+	      description: 'Function to execute after the trial has loaded'
+	    },
 	    post_trial_gap: {
 	      type: module.parameterType.INT,
 	      pretty_name: 'Post trial gap',
-	      default: undefined,
+	      default: null,
 	      description: 'Length of gap between the end of this trial and the start of the next trial'
 	    }
 	  }
@@ -6431,6 +6484,17 @@ return /******/ (function(modules) { // webpackBootstrap
 	    return undefined;
 	  }
 	
+	  module.compareKeys = function(key1, key2){
+	    // convert to numeric values no matter what
+	    if(typeof key1 == 'string') {
+	      key1 = module.convertKeyCharacterToKeyCode(key1);
+	    }
+	    if(typeof key2 == 'string') {
+	      key2 = module.convertKeyCharacterToKeyCode(key2);
+	    }
+	    return key1 == key2;
+	  }
+	
 	  var keylookup = {
 	    'backspace': 8,
 	    'tab': 9,
@@ -6545,17 +6609,19 @@ return /******/ (function(modules) { // webpackBootstrap
 	  }
 	
 	  // audio //
-	
-	  // temporary patch for Safari
-	  if (typeof window !== 'undefined' && window.hasOwnProperty('webkitAudioContext') && !window.hasOwnProperty('AudioContext')) {
-	    window.AudioContext = webkitAudioContext;
-	  }
-	  // end patch
-	
-	  var context = (typeof window !== 'undefined' && typeof window.AudioContext !== 'undefined') ? new AudioContext() : null;
+	  var context = null;
 	  var audio_buffers = [];
 	
+	  module.initAudio = function(){
+	    context = (jsPsych.initSettings().use_webaudio == true) ? jsPsych.webaudio_context : null;
+	  }
+	
 	  module.audioContext = function(){
+	    if(context !== null){
+	      if(context.state !== 'running'){
+	        context.resume();
+	      }
+	    }
 	    return context;
 	  }
 	
@@ -6590,7 +6656,8 @@ return /******/ (function(modules) { // webpackBootstrap
 	      return;
 	    }
 	
-	    function load_audio_file_webaudio(source){
+	    function load_audio_file_webaudio(source, count){
+	      count = count || 1;
 	      var request = new XMLHttpRequest();
 	      request.open('GET', source, true);
 	      request.responseType = 'arraybuffer';
@@ -6606,10 +6673,20 @@ return /******/ (function(modules) { // webpackBootstrap
 	          console.error('Error loading audio file: ' + bufferID);
 	        });
 	      }
+	      request.onerror = function(){
+	        if(count < jsPsych.initSettings().max_preload_attempts){
+	          setTimeout(function(){
+	            load_audio_file_webaudio(source, count+1)
+	          }, 200);
+	        } else {
+	          jsPsych.loadFail();
+	        }
+	      }
 	      request.send();
 	    }
 	
-	    function load_audio_file_html5audio(source){
+	    function load_audio_file_html5audio(source, count){
+	      count = count || 1;
 	      var audio = new Audio();
 	      audio.addEventListener('canplaythrough', function(){
 	        audio_buffers[source] = audio;
@@ -6617,6 +6694,33 @@ return /******/ (function(modules) { // webpackBootstrap
 	        loadfn(n_loaded);
 	        if(n_loaded == files.length){
 	          finishfn();
+	        }
+	      });
+	      audio.addEventListener('onerror', function(){
+	        if(count < jsPsych.initSettings().max_preload_attempts){
+	          setTimeout(function(){
+	            load_audio_file_html5audio(source, count+1)
+	          }, 200);
+	        } else {
+	          jsPsych.loadFail();
+	        }
+	      });
+	      audio.addEventListener('onstalled', function(){
+	        if(count < jsPsych.initSettings().max_preload_attempts){
+	          setTimeout(function(){
+	            load_audio_file_html5audio(source, count+1)
+	          }, 200);
+	        } else {
+	          jsPsych.loadFail();
+	        }
+	      });
+	      audio.addEventListener('onabort', function(){
+	        if(count < jsPsych.initSettings().max_preload_attempts){
+	          setTimeout(function(){
+	            load_audio_file_html5audio(source, count+1)
+	          }, 200);
+	        } else {
+	          jsPsych.loadFail();
 	        }
 	      });
 	      audio.src = source;
@@ -6657,7 +6761,9 @@ return /******/ (function(modules) { // webpackBootstrap
 	      return;
 	    }
 	
-	    for (var i = 0; i < images.length; i++) {
+	    function preload_image(source, count){
+	      count = count || 1;
+	
 	      var img = new Image();
 	
 	      img.onload = function() {
@@ -6669,17 +6775,24 @@ return /******/ (function(modules) { // webpackBootstrap
 	      };
 	
 	      img.onerror = function() {
-	        n_loaded++;
-	        loadfn(n_loaded);
-	        if (n_loaded == images.length) {
-	          finishfn();
+	        if(count < jsPsych.initSettings().max_preload_attempts){
+	          setTimeout(function(){
+	            preload_image(source, count+1);
+	          }, 200);
+	        } else {
+	          jsPsych.loadFail();
 	        }
 	      }
 	
-	      img.src = images[i];
+	      img.src = source;
 	
-	      img_cache[images[i]] = img;
+	      img_cache[source] = img;
 	    }
+	
+	    for (var i = 0; i < images.length; i++) {
+	      preload_image(images[i]);
+	    }
+	
 	  };
 	
 	  module.registerPreload = function(plugin_name, parameter, media_type, conditional_function) {
@@ -6810,6 +6923,7 @@ return /******/ (function(modules) { // webpackBootstrap
 		}
 	
 		module.deepCopy = function(obj) {
+	    if(!obj) return obj;
 	    var out;
 	    if(Array.isArray(obj)){
 	      out = [];
@@ -6900,15 +7014,8 @@ return /******/ (function(modules) { // webpackBootstrap
 	  };
 	}
 	
-	(function (root, factory) {
-	  if(true) {
-	     !(__WEBPACK_AMD_DEFINE_ARRAY__ = [], __WEBPACK_AMD_DEFINE_FACTORY__ = (factory), __WEBPACK_AMD_DEFINE_RESULT__ = (typeof __WEBPACK_AMD_DEFINE_FACTORY__ === 'function' ? (__WEBPACK_AMD_DEFINE_FACTORY__.apply(exports, __WEBPACK_AMD_DEFINE_ARRAY__)) : __WEBPACK_AMD_DEFINE_FACTORY__), __WEBPACK_AMD_DEFINE_RESULT__ !== undefined && (module.exports = __WEBPACK_AMD_DEFINE_RESULT__));
-	  } else if(typeof module === "object" && module.exports) {
-	     module.exports = factory;
-	  } else {
-	     root.jsPsych = factory;
-	  }
-	}(this, jsPsych));
+	return jsPsych;
+	}));
 
 
 /***/ }),
@@ -13553,7 +13660,14 @@ return /******/ (function(modules) { // webpackBootstrap
 /* 97 */
 /***/ (function(module, exports, __webpack_require__) {
 
-	var __WEBPACK_AMD_DEFINE_FACTORY__, __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_DEFINE_RESULT__;/**
+	var __WEBPACK_AMD_DEFINE_FACTORY__, __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_DEFINE_RESULT__;(function(factory) {
+	    if (true) {
+	        !(__WEBPACK_AMD_DEFINE_ARRAY__ = [__webpack_require__(32)], __WEBPACK_AMD_DEFINE_FACTORY__ = (factory), __WEBPACK_AMD_DEFINE_RESULT__ = (typeof __WEBPACK_AMD_DEFINE_FACTORY__ === 'function' ? (__WEBPACK_AMD_DEFINE_FACTORY__.apply(exports, __WEBPACK_AMD_DEFINE_ARRAY__)) : __WEBPACK_AMD_DEFINE_FACTORY__), __WEBPACK_AMD_DEFINE_RESULT__ !== undefined && (module.exports = __WEBPACK_AMD_DEFINE_RESULT__));
+	    } else {
+	        factory(jsPsych);
+	    }
+	}(function(jsPsych) {
+		/**
 	 * jspsych-html-keyboard-response
 	 * Josh de Leeuw
 	 *
@@ -13562,17 +13676,9 @@ return /******/ (function(modules) { // webpackBootstrap
 	 * documentation: docs.jspsych.org
 	 *
 	 **/
-	const jsPsych = window.jsPsych || __webpack_require__(32);
 	
-	(function (root, factory) {
-	  if(true) {
-	     !(__WEBPACK_AMD_DEFINE_ARRAY__ = [], __WEBPACK_AMD_DEFINE_FACTORY__ = (factory), __WEBPACK_AMD_DEFINE_RESULT__ = (typeof __WEBPACK_AMD_DEFINE_FACTORY__ === 'function' ? (__WEBPACK_AMD_DEFINE_FACTORY__.apply(exports, __WEBPACK_AMD_DEFINE_ARRAY__)) : __WEBPACK_AMD_DEFINE_FACTORY__), __WEBPACK_AMD_DEFINE_RESULT__ !== undefined && (module.exports = __WEBPACK_AMD_DEFINE_RESULT__));
-	  } else if(typeof module === "object" && module.exports) {
-	     module.exports = factory;
-	  } else {
-	     root.jsPsych.plugins["html-keyboard-response"] = factory;
-	  }
-	}(this, (function() {
+	
+	jsPsych.plugins["html-keyboard-response"] = (function() {
 	
 	  var plugin = {};
 	
@@ -13582,7 +13688,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	    parameters: {
 	      stimulus: {
 	        type: jsPsych.plugins.parameterType.HTML_STRING,
-	        pretty_name: 'stimulus',
+	        pretty_name: 'Stimulus',
 	        default: undefined,
 	        description: 'The HTML string to be displayed'
 	      },
@@ -13596,19 +13702,19 @@ return /******/ (function(modules) { // webpackBootstrap
 	      prompt: {
 	        type: jsPsych.plugins.parameterType.STRING,
 	        pretty_name: 'Prompt',
-	        default: '',
+	        default: null,
 	        description: 'Any content here will be displayed below the stimulus.'
 	      },
 	      stimulus_duration: {
 	        type: jsPsych.plugins.parameterType.INT,
 	        pretty_name: 'Stimulus duration',
-	        default: -1,
+	        default: null,
 	        description: 'How long to hide the stimulus.'
 	      },
 	      trial_duration: {
 	        type: jsPsych.plugins.parameterType.INT,
 	        pretty_name: 'Trial duration',
-	        default: -1,
+	        default: null,
 	        description: 'How long to show trial before it ends.'
 	      },
 	      response_ends_trial: {
@@ -13626,15 +13732,17 @@ return /******/ (function(modules) { // webpackBootstrap
 	    var new_html = '<div id="jspsych-html-keyboard-response-stimulus">'+trial.stimulus+'</div>';
 	
 	    // add prompt
-	    new_html += trial.prompt;
+	    if(trial.prompt !== null){
+	      new_html += trial.prompt;
+	    }
 	
 	    // draw
 	    display_element.innerHTML = new_html;
 	
 	    // store response
 	    var response = {
-	      rt: -1,
-	      key: -1
+	      rt: null,
+	      key: null
 	    };
 	
 	    // function to end trial when it is time
@@ -13670,7 +13778,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	      display_element.querySelector('#jspsych-html-keyboard-response-stimulus').className += ' responded';
 	
 	      // only record the first response
-	      if (response.key == -1) {
+	      if (response.key == null) {
 	        response = info;
 	      }
 	
@@ -13691,14 +13799,14 @@ return /******/ (function(modules) { // webpackBootstrap
 	    }
 	
 	    // hide stimulus if stimulus_duration is set
-	    if (trial.stimulus_duration > 0) {
+	    if (trial.stimulus_duration !== null) {
 	      jsPsych.pluginAPI.setTimeout(function() {
 	        display_element.querySelector('#jspsych-html-keyboard-response-stimulus').style.visibility = 'hidden';
 	      }, trial.stimulus_duration);
 	    }
 	
 	    // end trial if trial_duration is set
-	    if (trial.trial_duration > 0) {
+	    if (trial.trial_duration !== null) {
 	      jsPsych.pluginAPI.setTimeout(function() {
 	        end_trial();
 	      }, trial.trial_duration);
@@ -13707,15 +13815,22 @@ return /******/ (function(modules) { // webpackBootstrap
 	  };
 	
 	  return plugin;
-	})()
-	));
-
+	})();
+	
+	}));
 
 /***/ }),
 /* 98 */
 /***/ (function(module, exports, __webpack_require__) {
 
-	var __WEBPACK_AMD_DEFINE_FACTORY__, __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_DEFINE_RESULT__;/**
+	var __WEBPACK_AMD_DEFINE_FACTORY__, __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_DEFINE_RESULT__;(function(factory) {
+	    if (true) {
+	        !(__WEBPACK_AMD_DEFINE_ARRAY__ = [__webpack_require__(32)], __WEBPACK_AMD_DEFINE_FACTORY__ = (factory), __WEBPACK_AMD_DEFINE_RESULT__ = (typeof __WEBPACK_AMD_DEFINE_FACTORY__ === 'function' ? (__WEBPACK_AMD_DEFINE_FACTORY__.apply(exports, __WEBPACK_AMD_DEFINE_ARRAY__)) : __WEBPACK_AMD_DEFINE_FACTORY__), __WEBPACK_AMD_DEFINE_RESULT__ !== undefined && (module.exports = __WEBPACK_AMD_DEFINE_RESULT__));
+	    } else {
+	        factory(jsPsych);
+	    }
+	}(function(jsPsych) {
+		/**
 	 * jspsych-image-keyboard-response
 	 * Josh de Leeuw
 	 *
@@ -13724,17 +13839,9 @@ return /******/ (function(modules) { // webpackBootstrap
 	 * documentation: docs.jspsych.org
 	 *
 	 **/
-	const jsPsych = window.jsPsych || __webpack_require__(32);
 	
-	(function (root, factory) {
-	  if(true) {
-	     !(__WEBPACK_AMD_DEFINE_ARRAY__ = [], __WEBPACK_AMD_DEFINE_FACTORY__ = (factory), __WEBPACK_AMD_DEFINE_RESULT__ = (typeof __WEBPACK_AMD_DEFINE_FACTORY__ === 'function' ? (__WEBPACK_AMD_DEFINE_FACTORY__.apply(exports, __WEBPACK_AMD_DEFINE_ARRAY__)) : __WEBPACK_AMD_DEFINE_FACTORY__), __WEBPACK_AMD_DEFINE_RESULT__ !== undefined && (module.exports = __WEBPACK_AMD_DEFINE_RESULT__));
-	  } else if(typeof module === "object" && module.exports) {
-	     module.exports = factory;
-	  } else {
-	     root.jsPsych.plugins["image-keyboard-response"] = factory;
-	  }
-	}(this, (function() {
+	
+	jsPsych.plugins["image-keyboard-response"] = (function() {
 	
 	  var plugin = {};
 	
@@ -13746,7 +13853,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	    parameters: {
 	      stimulus: {
 	        type: jsPsych.plugins.parameterType.IMAGE,
-	        pretty_name: 'stimulus',
+	        pretty_name: 'Stimulus',
 	        default: undefined,
 	        description: 'The image to be displayed'
 	      },
@@ -13760,19 +13867,19 @@ return /******/ (function(modules) { // webpackBootstrap
 	      prompt: {
 	        type: jsPsych.plugins.parameterType.STRING,
 	        pretty_name: 'Prompt',
-	        default: '',
+	        default: null,
 	        description: 'Any content here will be displayed below the stimulus.'
 	      },
 	      stimulus_duration: {
 	        type: jsPsych.plugins.parameterType.INT,
 	        pretty_name: 'Stimulus duration',
-	        default: -1,
+	        default: null,
 	        description: 'How long to hide the stimulus.'
 	      },
 	      trial_duration: {
 	        type: jsPsych.plugins.parameterType.INT,
 	        pretty_name: 'Trial duration',
-	        default: -1,
+	        default: null,
 	        description: 'How long to show trial before it ends.'
 	      },
 	      response_ends_trial: {
@@ -13789,15 +13896,17 @@ return /******/ (function(modules) { // webpackBootstrap
 	    var new_html = '<img src="'+trial.stimulus+'" id="jspsych-image-keyboard-response-stimulus"></img>';
 	
 	    // add prompt
-	    new_html += trial.prompt;
+	    if (trial.prompt !== null){
+	      new_html += trial.prompt;
+	    }
 	
 	    // draw
 	    display_element.innerHTML = new_html;
 	
 	    // store response
 	    var response = {
-	      rt: -1,
-	      key: -1
+	      rt: null,
+	      key: null
 	    };
 	
 	    // function to end trial when it is time
@@ -13833,7 +13942,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	      display_element.querySelector('#jspsych-image-keyboard-response-stimulus').className += ' responded';
 	
 	      // only record the first response
-	      if (response.key == -1) {
+	      if (response.key == null) {
 	        response = info;
 	      }
 	
@@ -13854,14 +13963,14 @@ return /******/ (function(modules) { // webpackBootstrap
 	    }
 	
 	    // hide stimulus if stimulus_duration is set
-	    if (trial.stimulus_duration > 0) {
+	    if (trial.stimulus_duration !== null) {
 	      jsPsych.pluginAPI.setTimeout(function() {
 	        display_element.querySelector('#jspsych-image-keyboard-response-stimulus').style.visibility = 'hidden';
 	      }, trial.stimulus_duration);
 	    }
 	
 	    // end trial if trial_duration is set
-	    if (trial.trial_duration > 0) {
+	    if (trial.trial_duration !== null) {
 	      jsPsych.pluginAPI.setTimeout(function() {
 	        end_trial();
 	      }, trial.trial_duration);
@@ -13870,9 +13979,9 @@ return /******/ (function(modules) { // webpackBootstrap
 	  };
 	
 	  return plugin;
-	})()
-	));
-
+	})();
+	
+	}));
 
 /***/ }),
 /* 99 */

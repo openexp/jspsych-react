@@ -1,6 +1,6 @@
 {
   "name": "jspsych-react",
-  "version": "0.0.7",
+  "version": "0.0.8",
   "description": "A simple React component for jspsych",
   "main": "dist/experiment.js",
   "repository": "git@github.com:teonbrooks/jspsych-react.git",
@@ -14,7 +14,11 @@
     "test": "mocha --compilers js:babel-core/register --require ./test/test_helper.js --recursive ./test",
     "test:watch": "npm run test -- --watch"
   },
-  "contributors": ["Teon Brooks", "Marion Le Borgne", "William Wnekowicz"],
+  "contributors": [
+    "Teon Brooks",
+    "Marion Le Borgne",
+    "William Wnekowicz"
+  ],
   "license": "ISC",
   "devDependencies": {
     "babel-cli": "^6.26.0",
@@ -28,16 +32,19 @@
     "babel-preset-stage-0": "^6.3.13",
     "chai": "^3.5.0",
     "chai-jquery": "^2.0.0",
+    "gulp": "^3.9.1",
+    "gulp-umd": "^2.0.0",
     "jquery": "^2.2.1",
     "jsdom": "^8.1.0",
     "mocha": "^2.4.5",
     "react-addons-test-utils": "^0.14.7",
     "rimraf": "^2.5.0",
+    "umd-templates": "0.0.3",
     "webpack": "^1.12.9",
     "webpack-dev-server": "^1.14.0"
   },
   "dependencies": {
-    "jspsych": "git://github.com/teonbrooks/jspsych.git#npm",
+    "jspsych": "git://github.com/teonbrooks/jspsych.git#npm-module",
     "react": "^0.14.3"
   }
 }

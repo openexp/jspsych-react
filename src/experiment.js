@@ -1,7 +1,7 @@
 import React, { Component } from 'react';
 import jsPsych from 'jspsych';
-import html_keyboard_response from 'jspsych/plugins/jspsych-html-keyboard-response';
-import image_keyboard_response from 'jspsych/plugins/jspsych-image-keyboard-response';
+import html_keyboard_response from 'jspsych/build/plugins/jspsych-html-keyboard-response';
+import image_keyboard_response from 'jspsych/build/plugins/jspsych-image-keyboard-response';
 
 
 class Experiment extends Component {
