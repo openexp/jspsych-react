@@ -1,12 +1,7 @@
 <!-- Logo -->
 <p align="center">
-    <img height="128" width="128" src="/jspsych-react-logo.jpg">
+    <img src="/jspsych-react-logo.jpg">
 </p>
-
-<!-- Name -->
-<h1 align="center">
-  <a href="https://www.jspsych.org//">jsPsych React</a>
-</h1>
 
 > jsPsych React is a very new project, but will hopefully be of use to anyone crazy enough to be building experimental psychology apps in JavaScript!:
 
