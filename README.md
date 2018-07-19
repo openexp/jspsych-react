@@ -15,7 +15,7 @@ Clone this repo
 
 `npm link` your version of the local repo
 
-In the project you want to use jsPsyc React in, run `npm link jspsych-react`
+In the project you want to use jsPsych React in, run `npm link jspsych-react`
 
 You can use the `Experiment` component from jsPsych React to include a jsPsych experiment in your project. It requires two props: `timeline` and `plugins`
 
