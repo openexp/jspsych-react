@@ -1,7 +1,5 @@
 import React, { Component } from "react";
 import jsPsych from "jspsych";
-import html_keyboard_response from "jspsych/build/plugins/jspsych-html-keyboard-response";
-import image_keyboard_response from "jspsych/build/plugins/jspsych-image-keyboard-response";
 import plugins from './plugins';  // load all built-in plugins
 
 class Experiment extends Component {
@@ -14,7 +12,7 @@ class Experiment extends Component {
       }
     ];
 
-    Object.assign(jsPsych.plugins, plugins, props.plugins)
+    Object.assign(jsPsych.plugins, plugins, props.plugins);
 
     this.experimentDiv = null;
     this.timeline = props.timeline || default_timeline;
