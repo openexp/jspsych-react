@@ -1,6 +1,6 @@
 <!-- Logo -->
 <p align="center">
-    <img width="400" src="/jspsych-react-logo.jpg">
+    <img width="400" src="https://raw.githubusercontent.com/makebrainwaves/jspsych-react/master/jspsych-react-logo.jpg">
 </p>
 
 
