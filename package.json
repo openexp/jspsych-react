@@ -1,6 +1,6 @@
 {
   "name": "jspsych-react",
-  "version": "0.0.8",
+  "version": "0.1.0",
   "description": "A simple React component for jspsych",
   "main": "dist/experiment.js",
   "repository": "git@github.com:teonbrooks/jspsych-react.git",
@@ -15,8 +15,9 @@
     "test:watch": "npm run test -- --watch"
   },
   "contributors": [
-    "Teon Brooks",
+    "Teon L Brooks",
     "Marion Le Borgne",
+    "Dano Morrison",
     "William Wnekowicz"
   ],
   "license": "ISC",
