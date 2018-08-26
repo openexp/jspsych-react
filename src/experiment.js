@@ -1,6 +1,6 @@
 import React, { Component } from "react";
 import jsPsych from "jspsych";
-import plugins from './plugins';  // load all built-in plugins
+import plugins from "./plugins"; // load all built-in plugins
 
 class Experiment extends Component {
   constructor(props) {
@@ -18,7 +18,9 @@ class Experiment extends Component {
     this.timeline = props.timeline || default_timeline;
     this.width = props.width || "100%";
     this.height = props.height || "100%";
-    this.default_iti = props.default_iti || 3000;
+    this.default_iti = props.default_iti || 0;
+    this.show_progress_bar = props.show_progress_bar;
+    this.auto_update_progress_bar = props.auto_update_progress_bar;
   }
 
   render() {
@@ -64,7 +66,9 @@ class Experiment extends Component {
     jsPsych.init({
       display_element: this.experimentDiv,
       timeline: this.timeline,
-      default_iti: this.default_iti
+      default_iti: this.default_iti,
+      show_progress_bar: this.show_progress_bar,
+      auto_update_progress_bar: this.auto_update_progress_bar
     });
   }
 }
