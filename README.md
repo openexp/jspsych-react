@@ -8,14 +8,10 @@
 
 ## Getting Started
 
-jsPsych React is not yet an npm module. For now:
+jsPsych React is now an npm module:
 
-Clone this repo
-`git clone https://github.com/makebrainwaves/jspsych-react`
+`npm install jspsych-react`
 
-`npm link` your version of the local repo
-
-In the project you want to use jsPsych React in, run `npm link jspsych-react`
 
 You can use the `Experiment` component from jsPsych React to include a jsPsych experiment in your project. It requires two props: `timeline` and `plugins`
 
