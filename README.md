@@ -3,37 +3,47 @@
     <img width="400" src="https://raw.githubusercontent.com/makebrainwaves/jspsych-react/master/jspsych-react-logo.jpg">
 </p>
 
+# Getting Started
 
-> jsPsych React is a very new project, but will hopefully be of use to anyone crazy enough to be building experimental psychology apps in JavaScript!:
+`npm install jspsych-react`
 
-## Getting Started
-
-jsPsych React is not yet an npm module. For now:
-
-Clone this repo
-`git clone https://github.com/makebrainwaves/jspsych-react`
-
-`npm link` your version of the local repo
-
-In the project you want to use jsPsych React in, run `npm link jspsych-react`
-
-You can use the `Experiment` component from jsPsych React to include a jsPsych experiment in your project. It requires two props: `timeline` and `plugins`
+You can use the `Experiment` component to include a jsPsych experiment in your React project. For example:
 
 ```javascript
+import React, { Component } from 'react'
 import { Experiment } from "jspsych-react";
-import { visualOddball } from "../examples/timelines";
-import { callbackHTMLDisplay, callbackImageDisplay } from "../examples/plugins";
+import { visualOddball } from "./examples/timelines";
+import { callbackHTMLDisplay, callbackImageDisplay } from "./examples/plugins";
 
-// ...
-
-render() {
+export default class ExperimentComponent extends Component {
+  render() {
     return (
-    <div>
-      <Experiment
-        timeline={visualOddball}
-        plugins={{ callbackHTMLDisplay, callbackImageDisplay }}
-      />
-    </div>
-  );
+      <div>
+        <Experiment
+          settings={{ timeline: visualOddball }}
+          plugins={{
+            "callback-html-display": callbackHTMLDisplay,
+            "callback-image-display": callbackImageDisplay
+          }}
+        />
+      </div>
+    );
+  }
 }
 ```
+
+You can also import the jsPsych object to access other jsPsych functionality, such as updating the progress bar during a jsPsych experiment.
+
+# API
+
+## Props
+
+### Experiment
+
+| Name     | Type     | Default    | Description                                                                                                                                                                                                                                                                                         |
+| -------- | -------- | ---------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| settings | `object` | `required` | The settings object is passed to the `jsPsych.init()` function and defines many aspects of an experiment. It can contain many parameters, but the only _required_ parameter is a timeline. See the the [jsPsych API documentation](https://www.jspsych.org/core_library/jspsych-core/#jspsychinit). |
+| plugins  | `object` | `null`     | Custom plugins to be passed to jsPsych for use in the experiment. Object keys should match the names of the plugins referenced in the timeline.
+
+# License
+MIT © [Teon Brooks](http://teonbrooks.github.io/)
