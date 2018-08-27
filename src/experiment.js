@@ -12,15 +12,25 @@ class Experiment extends Component {
       }
     ];
 
-    Object.assign(jsPsych.plugins, plugins, props.plugins);
+    Object.assign(jsPsych.plugins, plugins, props.settings.plugins);
+
+    this.handleKeyEvent = e => {
+      if (e.redispatched) {
+        return;
+      }
+      let new_event = new e.constructor(e.type, e);
+      new_event.redispatched = true;
+      this.experimentDiv.dispatchEvent(new_event);
+    };
 
     this.experimentDiv = null;
-    this.timeline = props.timeline || default_timeline;
     this.width = props.width || "100%";
     this.height = props.height || "100%";
-    this.default_iti = props.default_iti || 0;
-    this.show_progress_bar = props.show_progress_bar;
-    this.auto_update_progress_bar = props.auto_update_progress_bar;
+
+    this.settings = {
+      ...props.settings,
+      timeline: props.settings.timeline || default_timeline
+    };
   }
 
   render() {
@@ -36,40 +46,22 @@ class Experiment extends Component {
   }
 
   componentDidMount() {
-    window.addEventListener(
-      "keyup",
-      e => {
-        if (e.redispatched) {
-          return;
-        }
-        let new_event = new e.constructor(e.type, e);
-        new_event.redispatched = true;
-        this.experimentDiv.dispatchEvent(new_event);
-      },
-      true
-    );
+    window.addEventListener("keyup", this.handleKeyEvent, true);
 
-    window.addEventListener(
-      "keydown",
-      e => {
-        if (e.redispatched) {
-          return;
-        }
-        let new_event = new e.constructor(e.type, e);
-        new_event.redispatched = true;
-        this.experimentDiv.dispatchEvent(new_event);
-      },
-      true
-    );
+    window.addEventListener("keydown", this.handleKeyEvent, true);
 
     /* start the experiment */
-    jsPsych.init({
-      display_element: this.experimentDiv,
-      timeline: this.timeline,
-      default_iti: this.default_iti,
-      show_progress_bar: this.show_progress_bar,
-      auto_update_progress_bar: this.auto_update_progress_bar
-    });
+    jsPsych.init({ ...this.settings, display_element: this.experimentDiv });
+  }
+
+  componentWillUnmount() {
+    try {
+      jsPsych.endExperiment("Ended Experiment");
+      window.removeEventListener("keyup", this.handleKeyEvent, true);
+      window.removeEventListener("keydown", this.handleKeyEvent, true);
+    } catch (e) {
+      console.error(e);
+    }
   }
 }
 
