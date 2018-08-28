@@ -12,7 +12,7 @@ class Experiment extends Component {
       }
     ];
 
-    Object.assign(jsPsych.plugins, plugins, props.settings.plugins);
+    Object.assign(jsPsych.plugins, plugins, props.plugins);
 
     this.handleKeyEvent = e => {
       if (e.redispatched) {
@@ -47,21 +47,14 @@ class Experiment extends Component {
 
   componentDidMount() {
     window.addEventListener("keyup", this.handleKeyEvent, true);
-
     window.addEventListener("keydown", this.handleKeyEvent, true);
-
-    /* start the experiment */
     jsPsych.init({ ...this.settings, display_element: this.experimentDiv });
   }
 
   componentWillUnmount() {
-    try {
-      jsPsych.endExperiment("Ended Experiment");
-      window.removeEventListener("keyup", this.handleKeyEvent, true);
-      window.removeEventListener("keydown", this.handleKeyEvent, true);
-    } catch (e) {
-      console.error(e);
-    }
+    window.removeEventListener("keyup", this.handleKeyEvent, true);
+    window.removeEventListener("keydown", this.handleKeyEvent, true);
+    jsPsych.endExperiment("Ended Experiment");
   }
 }
 

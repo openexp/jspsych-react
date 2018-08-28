@@ -100,7 +100,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	      stimulus: "This is the default timeline."
 	    }];
 	
-	    Object.assign(_jspsych2.default.plugins, _plugins2.default, props.settings.plugins);
+	    Object.assign(_jspsych2.default.plugins, _plugins2.default, props.plugins);
 	
 	    _this.handleKeyEvent = function (e) {
 	      if (e.redispatched) {
@@ -138,22 +138,15 @@ return /******/ (function(modules) { // webpackBootstrap
 	    key: "componentDidMount",
 	    value: function componentDidMount() {
 	      window.addEventListener("keyup", this.handleKeyEvent, true);
-	
 	      window.addEventListener("keydown", this.handleKeyEvent, true);
-	
-	      /* start the experiment */
 	      _jspsych2.default.init(_extends({}, this.settings, { display_element: this.experimentDiv }));
 	    }
 	  }, {
 	    key: "componentWillUnmount",
 	    value: function componentWillUnmount() {
-	      try {
-	        _jspsych2.default.endExperiment("Ended Experiment");
-	        window.removeEventListener("keyup", this.handleKeyEvent, true);
-	        window.removeEventListener("keydown", this.handleKeyEvent, true);
-	      } catch (e) {
-	        console.error(e);
-	      }
+	      window.removeEventListener("keyup", this.handleKeyEvent, true);
+	      window.removeEventListener("keydown", this.handleKeyEvent, true);
+	      _jspsych2.default.endExperiment("Ended Experiment");
 	    }
 	  }]);
 	
@@ -256,17 +249,6 @@ return /******/ (function(modules) { // webpackBootstrap
 	  var waiting = false;
 	  // done loading?
 	  var loaded = false;
-	  var loadfail = false;
-	
-	  // storing a single webaudio context to prevent problems with multiple inits
-	  // of jsPsych
-	  core.webaudio_context = null;
-	  // temporary patch for Safari
-	  if (typeof window !== 'undefined' && window.hasOwnProperty('webkitAudioContext') && !window.hasOwnProperty('AudioContext')) {
-	    window.AudioContext = webkitAudioContext;
-	  }
-	  // end patch
-	  core.webaudio_context = (typeof window !== 'undefined' && typeof window.AudioContext !== 'undefined') ? new AudioContext() : null;
 	
 	  // enumerated variables for special parameter types
 	  core.ALL_KEYS = 'allkeys';
@@ -290,7 +272,6 @@ return /******/ (function(modules) { // webpackBootstrap
 	    paused = false;
 	    waiting = false;
 	    loaded = false;
-	    loadfail = false;
 	    jsPsych.data.reset();
 	
 	    var defaults = {
@@ -312,14 +293,12 @@ return /******/ (function(modules) { // webpackBootstrap
 	      },
 	      'preload_images': [],
 	      'preload_audio': [],
-	      'use_webaudio': true,
 	      'exclusions': {},
 	      'show_progress_bar': false,
 	      'auto_update_progress_bar': true,
 	      'auto_preload': true,
 	      'show_preload_progress_bar': true,
 	      'max_load_time': 60000,
-	      'max_preload_attempts': 10,
 	      'default_iti': 0
 	    };
 	
@@ -374,9 +353,6 @@ return /******/ (function(modules) { // webpackBootstrap
 	      timeline: opts.timeline
 	    });
 	
-	    // initialize audio context based on options and browser capabilities
-	    jsPsych.pluginAPI.initAudio();
-	
 	    // below code resets event listeners that may have lingered from
 	    // a previous incomplete experiment loaded in same DOM.
 	    jsPsych.pluginAPI.reset(opts.display_element);
@@ -394,8 +370,8 @@ return /******/ (function(modules) { // webpackBootstrap
 	          jsPsych.pluginAPI.autoPreload(timeline, startExperiment, opts.preload_images, opts.preload_audio, opts.show_preload_progress_bar);
 	          if(opts.max_load_time > 0){
 	            setTimeout(function(){
-	              if(!loaded && !loadfail){
-	                core.loadFail();
+	              if(!loaded){
+	                loadFail();
 	              }
 	            }, opts.max_load_time);
 	          }
@@ -470,7 +446,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	    opts.on_data_update(trial_data_values);
 	
 	    // wait for iti
-	    if (typeof current_trial.post_trial_gap === null) {
+	    if (typeof current_trial.post_trial_gap == 'undefined') {
 	      if (opts.default_iti > 0) {
 	        setTimeout(nextTrial, opts.default_iti);
 	      } else {
@@ -519,12 +495,10 @@ return /******/ (function(modules) { // webpackBootstrap
 	
 	  core.addNodeToEndOfTimeline = function(new_timeline, preload_callback){
 	    timeline.insert(new_timeline);
-	    if(typeof preload_callback !== 'undefinded'){
-	      if(opts.auto_preload){
-	        jsPsych.pluginAPI.autoPreload(timeline, preload_callback);
-	      } else {
-	        preload_callback();
-	      }
+	    if(opts.auto_preload){
+	      jsPsych.pluginAPI.autoPreload(timeline, preload_callback);
+	    } else {
+	      preload_callback();
 	    }
 	  }
 	
@@ -538,12 +512,6 @@ return /******/ (function(modules) { // webpackBootstrap
 	      waiting = false;
 	      nextTrial();
 	    }
-	  }
-	
-	  core.loadFail = function(message){
-	    message = message || '<p>The experiment failed to load.</p>';
-	    loadfail = true;
-	    DOM_target.innerHTML = message;
 	  }
 	
 	  function TimelineNode(parameters, parent, relativeID) {
@@ -1000,6 +968,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	    }
 	
 	    global_trial_index++;
+	    current_trial_finished = false;
 	
 	    // advance timeline
 	    timeline.markCurrentTrialComplete();
@@ -1021,8 +990,10 @@ return /******/ (function(modules) { // webpackBootstrap
 	
 	  function doTrial(trial) {
 	
+	    // call experiment wide callback
+	    opts.on_trial_start(trial);
+	
 	    current_trial = trial;
-	    current_trial_finished = false;
 	
 	    // process all timeline variables for this trial
 	    evaluateTimelineVariables(trial);
@@ -1033,24 +1004,8 @@ return /******/ (function(modules) { // webpackBootstrap
 	    // get default values for parameters
 	    setDefaultValues(trial);
 	
-	    // call experiment wide callback
-	    opts.on_trial_start(trial);
-	
-	    // call trial specific callback if it exists
-	    if(typeof trial.on_start == 'function'){
-	      trial.on_start(trial);
-	    }
-	
-	    // apply the focus to the DOM (for keyboard events)
-	    DOM_target.focus();
-	
 	    // execute trial method
 	    jsPsych.plugins[trial.type].trial(DOM_target, trial);
-	
-	    // call trial specific loaded callback if it exists
-	    if(typeof trial.on_load == 'function'){
-	      trial.on_load();
-	    }
 	  }
 	
 	  function evaluateTimelineVariables(trial){
@@ -1062,7 +1017,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	        trial[keys[i]] = trial[keys[i]].call();
 	      }
 	      // timeline variables that are nested in objects
-	      if (typeof trial[keys[i]] == "object" && trial[keys[i]] !== null){
+	      if (typeof trial[keys[i]] == "object"){
 	        evaluateTimelineVariables(trial[keys[i]]);
 	      }
 	    }
@@ -1103,6 +1058,10 @@ return /******/ (function(modules) { // webpackBootstrap
 	        }
 	      }
 	    }
+	  }
+	
+	  function loadFail(){
+	    DOM_target.innerHTML = '<p>The experiment failed to load.</p>';
 	  }
 	
 	  function checkExclusions(exclusions, success, fail){
@@ -1209,28 +1168,16 @@ return /******/ (function(modules) { // webpackBootstrap
 	      default: {},
 	      description: 'Data to add to this trial (key-value pairs)'
 	    },
-	    on_start: {
-	      type: module.parameterType.FUNCTION,
-	      pretty_name: 'On start',
-	      default: function() { return; },
-	      description: 'Function to execute when trial begins'
-	    },
 	    on_finish: {
 	      type: module.parameterType.FUNCTION,
 	      pretty_name: 'On finish',
 	      default: function() { return; },
 	      description: 'Function to execute when trial is finished'
 	    },
-	    on_load: {
-	      type: module.parameterType.FUNCTION,
-	      pretty_name: 'On load',
-	      default: function() { return; },
-	      description: 'Function to execute after the trial has loaded'
-	    },
 	    post_trial_gap: {
 	      type: module.parameterType.INT,
 	      pretty_name: 'Post trial gap',
-	      default: null,
+	      default: undefined,
 	      description: 'Length of gap between the end of this trial and the start of the next trial'
 	    }
 	  }
@@ -2216,17 +2163,6 @@ return /******/ (function(modules) { // webpackBootstrap
 	    return undefined;
 	  }
 	
-	  module.compareKeys = function(key1, key2){
-	    // convert to numeric values no matter what
-	    if(typeof key1 == 'string') {
-	      key1 = module.convertKeyCharacterToKeyCode(key1);
-	    }
-	    if(typeof key2 == 'string') {
-	      key2 = module.convertKeyCharacterToKeyCode(key2);
-	    }
-	    return key1 == key2;
-	  }
-	
 	  var keylookup = {
 	    'backspace': 8,
 	    'tab': 9,
@@ -2341,19 +2277,17 @@ return /******/ (function(modules) { // webpackBootstrap
 	  }
 	
 	  // audio //
-	  var context = null;
+	
+	  // temporary patch for Safari
+	  if (typeof window !== 'undefined' && window.hasOwnProperty('webkitAudioContext') && !window.hasOwnProperty('AudioContext')) {
+	    window.AudioContext = webkitAudioContext;
+	  }
+	  // end patch
+	
+	  var context = (typeof window !== 'undefined' && typeof window.AudioContext !== 'undefined') ? new AudioContext() : null;
 	  var audio_buffers = [];
 	
-	  module.initAudio = function(){
-	    context = (jsPsych.initSettings().use_webaudio == true) ? jsPsych.webaudio_context : null;
-	  }
-	
 	  module.audioContext = function(){
-	    if(context !== null){
-	      if(context.state !== 'running'){
-	        context.resume();
-	      }
-	    }
 	    return context;
 	  }
 	
@@ -2388,8 +2322,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	      return;
 	    }
 	
-	    function load_audio_file_webaudio(source, count){
-	      count = count || 1;
+	    function load_audio_file_webaudio(source){
 	      var request = new XMLHttpRequest();
 	      request.open('GET', source, true);
 	      request.responseType = 'arraybuffer';
@@ -2405,20 +2338,10 @@ return /******/ (function(modules) { // webpackBootstrap
 	          console.error('Error loading audio file: ' + bufferID);
 	        });
 	      }
-	      request.onerror = function(){
-	        if(count < jsPsych.initSettings().max_preload_attempts){
-	          setTimeout(function(){
-	            load_audio_file_webaudio(source, count+1)
-	          }, 200);
-	        } else {
-	          jsPsych.loadFail();
-	        }
-	      }
 	      request.send();
 	    }
 	
-	    function load_audio_file_html5audio(source, count){
-	      count = count || 1;
+	    function load_audio_file_html5audio(source){
 	      var audio = new Audio();
 	      audio.addEventListener('canplaythrough', function(){
 	        audio_buffers[source] = audio;
@@ -2426,33 +2349,6 @@ return /******/ (function(modules) { // webpackBootstrap
 	        loadfn(n_loaded);
 	        if(n_loaded == files.length){
 	          finishfn();
-	        }
-	      });
-	      audio.addEventListener('onerror', function(){
-	        if(count < jsPsych.initSettings().max_preload_attempts){
-	          setTimeout(function(){
-	            load_audio_file_html5audio(source, count+1)
-	          }, 200);
-	        } else {
-	          jsPsych.loadFail();
-	        }
-	      });
-	      audio.addEventListener('onstalled', function(){
-	        if(count < jsPsych.initSettings().max_preload_attempts){
-	          setTimeout(function(){
-	            load_audio_file_html5audio(source, count+1)
-	          }, 200);
-	        } else {
-	          jsPsych.loadFail();
-	        }
-	      });
-	      audio.addEventListener('onabort', function(){
-	        if(count < jsPsych.initSettings().max_preload_attempts){
-	          setTimeout(function(){
-	            load_audio_file_html5audio(source, count+1)
-	          }, 200);
-	        } else {
-	          jsPsych.loadFail();
 	        }
 	      });
 	      audio.src = source;
@@ -2493,9 +2389,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	      return;
 	    }
 	
-	    function preload_image(source, count){
-	      count = count || 1;
-	
+	    for (var i = 0; i < images.length; i++) {
 	      var img = new Image();
 	
 	      img.onload = function() {
@@ -2507,24 +2401,17 @@ return /******/ (function(modules) { // webpackBootstrap
 	      };
 	
 	      img.onerror = function() {
-	        if(count < jsPsych.initSettings().max_preload_attempts){
-	          setTimeout(function(){
-	            preload_image(source, count+1);
-	          }, 200);
-	        } else {
-	          jsPsych.loadFail();
+	        n_loaded++;
+	        loadfn(n_loaded);
+	        if (n_loaded == images.length) {
+	          finishfn();
 	        }
 	      }
 	
-	      img.src = source;
+	      img.src = images[i];
 	
-	      img_cache[source] = img;
+	      img_cache[images[i]] = img;
 	    }
-	
-	    for (var i = 0; i < images.length; i++) {
-	      preload_image(images[i]);
-	    }
-	
 	  };
 	
 	  module.registerPreload = function(plugin_name, parameter, media_type, conditional_function) {
@@ -2569,10 +2456,6 @@ return /******/ (function(modules) { // webpackBootstrap
 	
 	    images = jsPsych.utils.unique(images);
 	    audio  = jsPsych.utils.unique(audio);
-	
-	    // remove any 0s, nulls, or false values
-	    images = images.filter(function(x) { return x != false && x != null})
-	    audio = audio.filter(function(x) { return x != false && x != null})
 	
 	    var total_n = images.length + audio.length;
 	    var loaded = 0;
@@ -2659,7 +2542,6 @@ return /******/ (function(modules) { // webpackBootstrap
 		}
 	
 		module.deepCopy = function(obj) {
-	    if(!obj) return obj;
 	    var out;
 	    if(Array.isArray(obj)){
 	      out = [];
@@ -13907,7 +13789,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	      prompt: {
 	        type: jsPsych.plugins.parameterType.STRING,
 	        pretty_name: 'Prompt',
-	        default: null,
+	        default: '',
 	        description: 'Any content here will be displayed below stimulus.'
 	      }
 	    }
@@ -13953,7 +13835,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	        "time": (new Date()).getTime() - startTime
 	      });
 	
-	      if (trial.prompt !== null) {
+	      if (trial.prompt !== "") {
 	        display_element.innerHTML += trial.prompt;
 	      }
 	
@@ -14052,9 +13934,9 @@ return /******/ (function(modules) { // webpackBootstrap
 					description: 'The audio to be played.'
 				},
 				choices: {
-					type: jsPsych.plugins.parameterType.STRING,
+					type: jsPsych.plugins.parameterType.KEYCODE,
 	        pretty_name: 'Choices',
-					default: undefined,
+					default: [],
 					array: true,
 					description: 'The button labels.'
 				},
@@ -14068,13 +13950,13 @@ return /******/ (function(modules) { // webpackBootstrap
 	      prompt: {
 	        type: jsPsych.plugins.parameterType.STRING,
 	        pretty_name: 'Prompt',
-	        default: null,
+	        default: '',
 	        description: 'Any content here will be displayed below the stimulus.'
 	      },
 	      trial_duration: {
 	        type: jsPsych.plugins.parameterType.INT,
 	        pretty_name: 'Trial duration',
-	        default: null,
+	        default: -1,
 	        description: 'The maximum duration to wait for a response.'
 	      },
 	      margin_vertical: {
@@ -14141,33 +14023,30 @@ return /******/ (function(modules) { // webpackBootstrap
 	        buttons.push(trial.button_html);
 	      }
 	    }
-	
-	    var html = '<div id="jspsych-audio-button-response-btngroup">';
+	    display_element.innerHTML = '<div id="jspsych-audio-button-response-btngroup"></div>';
 	    for (var i = 0; i < trial.choices.length; i++) {
 	      var str = buttons[i].replace(/%choice%/g, trial.choices[i]);
-	      html += '<div class="jspsych-audio-button-response-button" style="cursor: pointer; display: inline-block; margin:'+trial.margin_vertical+' '+trial.margin_horizontal+'" id="jspsych-audio-button-response-button-' + i +'" data-choice="'+i+'">'+str+'</div>';
-	    }
-			html += '</div>';
-	
-			//show prompt if there is one
-			if (trial.prompt !== null) {
-				html += trial.prompt;
-			}
-	
-			display_element.innerHTML = html;
-	
-			for (var i = 0; i < trial.choices.length; i++) {
+	      display_element.querySelector('#jspsych-audio-button-response-btngroup').insertAdjacentHTML('beforeend',
+	        '<div class="jspsych-audio-button-response-button" style="cursor: pointer; display: inline-block; margin:'+trial.margin_vertical+' '+trial.margin_horizontal+'" id="jspsych-audio-button-response-button-' + i +'" data-choice="'+i+'">'+str+'</div>');
 	      display_element.querySelector('#jspsych-audio-button-response-button-' + i).addEventListener('click', function(e){
 	        var choice = e.currentTarget.getAttribute('data-choice'); // don't use dataset for jsdom compatibility
 	        after_response(choice);
 	      });
 	    }
 	
+	    //show prompt if there is one
+	    if (trial.prompt !== "") {
+	      display_element.insertAdjacentHTML('beforeend', trial.prompt);
+	    }
+	
 	    // store response
 	    var response = {
-	      rt: null,
-	      button: null
+	      rt: -1,
+	      button: -1
 	    };
+	
+	    // start time
+	    var start_time = 0;
 	
 	    // function to handle responses by the subject
 	    function after_response(choice) {
@@ -14220,19 +14099,19 @@ return /******/ (function(modules) { // webpackBootstrap
 	      jsPsych.finishTrial(trial_data);
 	    };
 	
-			// start time
-	    var start_time = Date.now();
+	    // start timing
+	    start_time = Date.now();
 	
 			// start audio
 	    if(context !== null){
-	      startTime = context.currentTime;
+	      startTime = context.currentTime + 0.1;
 	      source.start(startTime);
 	    } else {
 	      audio.play();
 	    }
 	
 	    // end trial if time limit is set
-	    if (trial.trial_duration !== null) {
+	    if (trial.trial_duration > 0) {
 	      jsPsych.pluginAPI.setTimeout(function() {
 	        end_trial();
 	      }, trial.trial_duration);
@@ -14294,13 +14173,13 @@ return /******/ (function(modules) { // webpackBootstrap
 	      prompt: {
 	        type: jsPsych.plugins.parameterType.STRING,
 	        pretty_name: 'Prompt',
-	        default: null,
+	        default: '',
 	        description: 'Any content here will be displayed below the stimulus.'
 	      },
 	      trial_duration: {
 	        type: jsPsych.plugins.parameterType.INT,
 	        pretty_name: 'Trial duration',
-	        default: null,
+	        default: -1,
 	        description: 'The maximum duration to wait for a response.'
 	      },
 	      response_ends_trial: {
@@ -14344,14 +14223,14 @@ return /******/ (function(modules) { // webpackBootstrap
 	    }
 	
 	    // show prompt if there is one
-	    if (trial.prompt !== null) {
+	    if (trial.prompt !== "") {
 	      display_element.innerHTML = trial.prompt;
 	    }
 	
 	    // store response
 	    var response = {
-	      rt: null,
-	      key: null
+	      rt: -1,
+	      key: -1
 	    };
 	
 	    // function to end trial when it is time
@@ -14374,11 +14253,8 @@ return /******/ (function(modules) { // webpackBootstrap
 	      jsPsych.pluginAPI.cancelAllKeyboardResponses();
 	
 	      // gather the data to store for the trial
-	      if(context !== null && response.rt !== null){
-	        response.rt = Math.round(response.rt * 1000);
-	      }
 	      var trial_data = {
-	        "rt": response.rt,
+	        "rt": context !== null ? response.rt * 1000 : response.rt,
 	        "stimulus": trial.stimulus,
 	        "key_press": response.key
 	      };
@@ -14394,7 +14270,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	    var after_response = function(info) {
 	
 	      // only record the first response
-	      if (response.key == null) {
+	      if (response.key == -1) {
 	        response = info;
 	      }
 	
@@ -14405,7 +14281,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	
 	    // start audio
 	    if(context !== null){
-	      startTime = context.currentTime;
+	      startTime = context.currentTime + 0.1;
 	      source.start(startTime);
 	    } else {
 	      audio.play();
@@ -14433,7 +14309,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	    }
 	
 	    // end trial if time limit is set
-	    if (trial.trial_duration !== null) {
+	    if (trial.trial_duration > 0) {
 	      jsPsych.pluginAPI.setTimeout(function() {
 	        end_trial();
 	      }, trial.trial_duration);
@@ -14487,12 +14363,6 @@ return /******/ (function(modules) { // webpackBootstrap
 	        default: 100,
 	        description: 'Sets the maximum value of the slider',
 	      },
-				start: {
-					type: jsPsych.plugins.parameterType.INT,
-					pretty_name: 'Slider starting value',
-					default: 50,
-					description: 'Sets the starting value of the slider',
-				},
 	      step: {
 	        type: jsPsych.plugins.parameterType.INT,
 	        pretty_name: 'Step',
@@ -14509,20 +14379,26 @@ return /******/ (function(modules) { // webpackBootstrap
 	      button_label: {
 	        type: jsPsych.plugins.parameterType.STRING,
 	        pretty_name: 'Button label',
-	        default: 'Continue',
+	        default: undefined,
 	        array: false,
 	        description: 'Label of the button to advance.'
 	      },
 	      prompt: {
 	        type: jsPsych.plugins.parameterType.STRING,
 	        pretty_name: 'Prompt',
-	        default: null,
+	        default: '',
 	        description: 'Any content here will be displayed below the slider.'
+	      },
+	      stimulus_duration: {
+	        type: jsPsych.plugins.parameterType.INT,
+	        pretty_name: 'Stimulus duration',
+	        default: -1,
+	        description: 'How long to hide the stimulus.'
 	      },
 	      trial_duration: {
 	        type: jsPsych.plugins.parameterType.INT,
 	        pretty_name: 'Trial duration',
-	        default: null,
+	        default: -1,
 	        description: 'How long to show the trial.'
 	      },
 	      response_ends_trial: {
@@ -14534,7 +14410,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	    }
 	  }
 	
-	  plugin.trial = function(display_element, trial) {
+	    plugin.trial = function(display_element, trial) {
 	
 	    // setup stimulus
 	    var context = jsPsych.pluginAPI.audioContext();
@@ -14559,8 +14435,9 @@ return /******/ (function(modules) { // webpackBootstrap
 	    }
 	
 	    var html = '<div id="jspsych-audio-slider-response-wrapper" style="margin: 100px 0px;">';
-	  	html += '<div class="jspsych-audio-slider-response-container" style="position:relative;">';
-	    html += '<input type="range" value="'+trial.start+'" min="'+trial.min+'" max="'+trial.max+'" step="'+trial.step+'" style="width: 100%;" id="jspsych-audio-slider-response-response"></input>';
+	    html += '<div id="jspsych-audio-slider-response-stimulus"><img src="' + trial.stimulus + '"></div>';
+	    html += '<div class="jspsych-audio-slider-response-container" style="position:relative;">';
+	    html += '<input type="range" min="'+trial.min+'" max="'+trial.max+'" step="'+trial.step+'" style="width: 100%;" id="jspsych-audio-slider-response-response"></input>';
 	    html += '<div>'
 	    for(var j=0; j < trial.labels.length; j++){
 	      var width = 100/(trial.labels.length-1);
@@ -14573,9 +14450,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	    html += '</div>';
 	    html += '</div>';
 	
-			if (trial.prompt !== null){
-		    html += trial.prompt;
-			}
+	    html += trial.prompt;
 	
 	    // add submit button
 	    html += '<button id="jspsych-audio-slider-response-next" class="jspsych-btn">'+trial.button_label+'</button>';
@@ -14583,19 +14458,14 @@ return /******/ (function(modules) { // webpackBootstrap
 	    display_element.innerHTML = html;
 	
 	    var response = {
-	      rt: null,
-	      response: null
+	      rt: -1,
+	      response: -1
 	    };
 	
 	    display_element.querySelector('#jspsych-audio-slider-response-next').addEventListener('click', function() {
 	      // measure response time
 	      var endTime = (new Date()).getTime();
-				var rt = endTime - startTime;
-				if(context !== null){
-					endTime = context.currentTime;
-					rt = Math.round((endTime - startTime) * 1000);
-				}
-	      response.rt = rt;
+	      response.rt = endTime - startTime;
 	      response.response = display_element.querySelector('#jspsych-audio-slider-response-response').value;
 	
 	      if(trial.response_ends_trial){
@@ -14610,18 +14480,9 @@ return /******/ (function(modules) { // webpackBootstrap
 	
 	      jsPsych.pluginAPI.clearAllTimeouts();
 	
-				if(context !== null){
-	        source.stop();
-	        source.onended = function() { }
-	      } else {
-	        audio.pause();
-	        audio.removeEventListener('ended', end_trial);
-	      }
-	
 	      // save data
 	      var trialdata = {
 	        "rt": response.rt,
-					"stimulus": trial.stimulus,
 	        "response": response.response
 	      };
 	
@@ -14631,23 +14492,20 @@ return /******/ (function(modules) { // webpackBootstrap
 	      jsPsych.finishTrial(trialdata);
 	    }
 	
-			var startTime = (new Date()).getTime();
-			// start audio
-	    if(context !== null){
-	      startTime = context.currentTime;
-	      source.start(startTime);
-	    } else {
-	      audio.play();
+	    if (trial.stimulus_duration > 0) {
+	      jsPsych.pluginAPI.setTimeout(function() {
+	        display_element.querySelector('#jspsych-audio-slider-response-stimulus').style.visibility = 'hidden';
+	      }, trial.stimulus_duration);
 	    }
 	
 	    // end trial if trial_duration is set
-	    if (trial.trial_duration !== null) {
+	    if (trial.trial_duration > 0) {
 	      jsPsych.pluginAPI.setTimeout(function() {
 	        end_trial();
 	      }, trial.trial_duration);
 	    }
 	
-	
+	    var startTime = (new Date()).getTime();
 	  };
 	
 	  return plugin;
@@ -14691,37 +14549,18 @@ return /******/ (function(modules) { // webpackBootstrap
 	        default: undefined,
 	        description: 'Function to call'
 	      },
-	      async: {
-	        type: jsPsych.plugins.parameterType.BOOL,
-	        pretty_name: 'Asynchronous',
-	        default: false,
-	        description: 'Is the function call asynchronous?'
-	      }
 	    }
 	  }
 	
 	  plugin.trial = function(display_element, trial) {
 	    trial.post_trial_gap = 0;
-	    var return_val;
+	    var return_val = trial.func();
 	
-	    if(trial.async){
-	      var done = function(data){
-	        return_val = data;
-	        end_trial();    
-	      }
-	      trial.func(done);
-	    } else {
-	      return_val = trial.func();
-	      end_trial();
-	    }
-	    
-	    function end_trial(){
-	      var trial_data = {
-	        value: return_val
-	      };
-	  
-	      jsPsych.finishTrial(trial_data);
-	    }
+	    var trial_data = {
+	      value: return_val
+	    };
+	
+	    jsPsych.finishTrial(trial_data);
 	  };
 	
 	  return plugin;
@@ -14781,7 +14620,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	      text_answer: {
 	        type: jsPsych.plugins.parameterType.STRING,
 	        pretty_name: 'Text answer',
-	        default: null,
+	        default: '',
 	        description: 'Text to describe correct answer.'
 	      },
 	      correct_text: {
@@ -14823,7 +14662,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	      prompt: {
 	        type: jsPsych.plugins.parameterType.STRING,
 	        pretty_name: 'Prompt',
-	        default: null,
+	        default: '',
 	        description: 'Any content here will be displayed below the stimulus.'
 	      },
 	    }
@@ -14863,14 +14702,14 @@ return /******/ (function(modules) { // webpackBootstrap
 	
 	      if (!responded && trial.allow_response_before_complete) {
 	        // in here if the user can respond before the animation is done
-	        if (trial.prompt !== null) {
+	        if (trial.prompt !== "") {
 	          display_element.innerHTML += trial.prompt;
 	        }
 	      } else if (!responded) {
 	        // in here if the user has to wait to respond until animation is done.
 	        // if this is the case, don't show the prompt until the animation is over.
 	        if (!showAnimation) {
-	          if (trial.prompt !== null) {
+	          if (trial.prompt !== "") {
 	            display_element.innerHTML += trial.prompt;
 	          }
 	        }
@@ -14997,7 +14836,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	      text_answer: {
 	        type: jsPsych.plugins.parameterType.STRING,
 	        pretty_name: 'Text answer',
-	        default: null,
+	        default: '',
 	        description: 'Label that is associated with the correct answer.'
 	      },
 	      correct_text: {
@@ -15015,7 +14854,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	      prompt: {
 	        type: jsPsych.plugins.parameterType.STRING,
 	        pretty_name: 'Prompt',
-	        default: null,
+	        default: '',
 	        description: 'Any content here will be displayed below the stimulus.'
 	      },
 	      force_correct_button_press: {
@@ -15045,13 +14884,13 @@ return /******/ (function(modules) { // webpackBootstrap
 	      stimulus_duration: {
 	        type: jsPsych.plugins.parameterType.INT,
 	        pretty_name: 'Stimulus duration',
-	        default: null,
+	        default: -1,
 	        description: 'How long to hide stimulus.'
 	      },
 	      trial_duration: {
 	        type: jsPsych.plugins.parameterType.INT,
 	        pretty_name: 'Trial duration',
-	        default: null,
+	        default: -1,
 	        description: 'How long to show trial'
 	      },
 	      feedback_duration: {
@@ -15068,14 +14907,14 @@ return /******/ (function(modules) { // webpackBootstrap
 	    display_element.innerHTML = '<div id="jspsych-categorize-html-stimulus" class="jspsych-categorize-html-stimulus">'+trial.stimulus+'</div>';
 	
 	    // hide image after time if the timing parameter is set
-	    if (trial.stimulus_duration !== null) {
+	    if (trial.stimulus_duration > 0) {
 	      jsPsych.pluginAPI.setTimeout(function() {
 	        display_element.querySelector('#jspsych-categorize-html-stimulus').style.visibility = 'hidden';
 	      }, trial.stimulus_duration);
 	    }
 	
 	    // if prompt is set, show prompt
-	    if (trial.prompt !== null) {
+	    if (trial.prompt !== "") {
 	      display_element.innerHTML += trial.prompt;
 	    }
 	
@@ -15105,7 +14944,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	
 	      display_element.innerHTML = '';
 	
-	      var timeout = info.rt == null;
+	      var timeout = info.rt == -1;
 	      doFeedback(correct, timeout);
 	    }
 	
@@ -15117,11 +14956,11 @@ return /******/ (function(modules) { // webpackBootstrap
 	      allow_held_key: false
 	    });
 	
-	    if (trial.trial_duration !== null) {
+	    if (trial.trial_duration > 0) {
 	      jsPsych.pluginAPI.setTimeout(function() {
 	        after_response({
-	          key: null,
-	          rt: null
+	          key: -1,
+	          rt: -1
 	        });
 	      }, trial.trial_duration);
 	    }
@@ -15234,7 +15073,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	      text_answer: {
 	        type: jsPsych.plugins.parameterType.STRING,
 	        pretty_name: 'Text answer',
-	        default: null,
+	        default: '',
 	        description: 'Label that is associated with the correct answer.'
 	      },
 	      correct_text: {
@@ -15252,7 +15091,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	      prompt: {
 	        type: jsPsych.plugins.parameterType.STRING,
 	        pretty_name: 'Prompt',
-	        default: null,
+	        default: '',
 	        description: 'Any content here will be displayed below the stimulus.'
 	      },
 	      force_correct_button_press: {
@@ -15282,13 +15121,13 @@ return /******/ (function(modules) { // webpackBootstrap
 	      stimulus_duration: {
 	        type: jsPsych.plugins.parameterType.INT,
 	        pretty_name: 'Stimulus duration',
-	        default: null,
+	        default: -1,
 	        description: 'How long to hide stimulus.'
 	      },
 	      trial_duration: {
 	        type: jsPsych.plugins.parameterType.INT,
 	        pretty_name: 'Trial duration',
-	        default: null,
+	        default: -1,
 	        description: 'How long to show trial'
 	      },
 	      feedback_duration: {
@@ -15305,14 +15144,14 @@ return /******/ (function(modules) { // webpackBootstrap
 	    display_element.innerHTML = '<img id="jspsych-categorize-image-stimulus" class="jspsych-categorize-image-stimulus" src="'+trial.stimulus+'"></img>';
 	
 	    // hide image after time if the timing parameter is set
-	    if (trial.stimulus_duration !== null) {
+	    if (trial.stimulus_duration > 0) {
 	      jsPsych.pluginAPI.setTimeout(function() {
 	        display_element.querySelector('#jspsych-categorize-image-stimulus').style.visibility = 'hidden';
 	      }, trial.stimulus_duration);
 	    }
 	
 	    // if prompt is set, show prompt
-	    if (trial.prompt !== null) {
+	    if (trial.prompt !== "") {
 	      display_element.innerHTML += trial.prompt;
 	    }
 	
@@ -15342,7 +15181,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	
 	      display_element.innerHTML = '';
 	
-	      var timeout = info.rt == null;
+	      var timeout = info.rt == -1;
 	      doFeedback(correct, timeout);
 	    }
 	
@@ -15354,11 +15193,11 @@ return /******/ (function(modules) { // webpackBootstrap
 	      allow_held_key: false
 	    });
 	
-	    if (trial.trial_duration !== null) {
+	    if (trial.trial_duration > 0) {
 	      jsPsych.pluginAPI.setTimeout(function() {
 	        after_response({
-	          key: null,
-	          rt: null
+	          key: -1,
+	          rt: -1
 	        });
 	      }, trial.trial_duration);
 	    }
@@ -15477,14 +15316,6 @@ return /******/ (function(modules) { // webpackBootstrap
 	        pretty_name: 'Force refresh',
 	        default: false,
 	        description: 'Refresh page.'
-	      },
-	      // if execute_Script == true, then all javascript code on the external page
-	      // will be executed in the plugin site within your jsPsych test
-	      execute_script: {
-	        type: jsPsych.plugins.parameterType.BOOL,
-	        pretty_name: 'Execute scripts',
-	        default: false,
-	        description: 'If true, JS scripts on the external html file will be executed.'
 	      }
 	    }
 	  }
@@ -15508,17 +15339,6 @@ return /******/ (function(modules) { // webpackBootstrap
 	        display_element.innerHTML = '';
 	        jsPsych.finishTrial(trial_data);
 	      };
-	
-	      // by default, scripts on the external page are not executed with XMLHttpRequest().
-	      // To activate their content through DOM manipulation, we need to relocate all script tags
-	      if (trial.execute_script) {
-	        for (const scriptElement of display_element.getElementsByTagName("script")) {
-	        const relocatedScript = document.createElement("script");
-	        relocatedScript.text = scriptElement.text;
-	        scriptElement.parentNode.replaceChild(relocatedScript, scriptElement);
-	        };
-	      }
-	
 	      if (trial.cont_btn) { display_element.querySelector('#'+trial.cont_btn).addEventListener('click', finish); }
 	      if (trial.cont_key) {
 	        var key_listener = function(e) {
@@ -16933,7 +16753,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	      prompt: {
 	        type: jsPsych.plugins.parameterType.STRING,
 	        pretty_name: 'Prompt',
-	        default: null,
+	        default: '',
 	        description: 'It can be used to provide a reminder about the action the subject is supposed to take.'
 	      },
 	      prompt_location: {
@@ -16958,7 +16778,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	
 	    var html = "";
 	    // check if there is a prompt and if it is shown above
-	    if (trial.prompt !== null && trial.prompt_location == "above") {
+	    if (trial.prompt && trial.prompt_location == "above") {
 	      html += trial.prompt;
 	    }
 	
@@ -16969,7 +16789,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	      '></div>';
 	
 	    // check if prompt exists and if it is shown below
-	    if (trial.prompt !== null && trial.prompt_location == "below") {
+	    if (trial.prompt && trial.prompt_location == "below") {
 	      html += trial.prompt;
 	    }
 	
@@ -17041,8 +16861,8 @@ return /******/ (function(modules) { // webpackBootstrap
 	      for(var i=0; i<matches.length; i++){
 	        final_locations.push({
 	          "src": matches[i].dataset.src,
-	          "x": parseInt(matches[i].style.left),
-	          "y": parseInt(matches[i].style.top)
+	          "x": matches[i].style.position.left,
+	          "y": matches[i].style.position.top
 	        });
 	      }
 	
@@ -17235,15 +17055,15 @@ return /******/ (function(modules) { // webpackBootstrap
 	        description: 'The HTML string to be displayed'
 	      },
 	      choices: {
-	        type: jsPsych.plugins.parameterType.STRING,
+	        type: jsPsych.plugins.parameterType.KEYCODE,
 	        pretty_name: 'Choices',
-	        default: undefined,
+	        default: [],
 	        array: true,
 	        description: 'The labels for the buttons.'
 	      },
 	      button_html: {
 	        type: jsPsych.plugins.parameterType.STRING,
-	        pretty_name: 'Button HTML',
+	        pretty_name: 'Button html',
 	        default: '<button class="jspsych-btn">%choice%</button>',
 	        array: true,
 	        description: 'The html of the button. Can create own style.'
@@ -17251,19 +17071,19 @@ return /******/ (function(modules) { // webpackBootstrap
 	      prompt: {
 	        type: jsPsych.plugins.parameterType.STRING,
 	        pretty_name: 'Prompt',
-	        default: null,
+	        default: '',
 	        description: 'Any content here will be displayed under the button.'
 	      },
 	      stimulus_duration: {
 	        type: jsPsych.plugins.parameterType.INT,
 	        pretty_name: 'Stimulus duration',
-	        default: null,
+	        default: -1,
 	        description: 'How long to hide the stimulus.'
 	      },
 	      trial_duration: {
 	        type: jsPsych.plugins.parameterType.INT,
 	        pretty_name: 'Trial duration',
-	        default: null,
+	        default: -1,
 	        description: 'How long to show the trial.'
 	      },
 	      margin_vertical: {
@@ -17290,7 +17110,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	  plugin.trial = function(display_element, trial) {
 	
 	    // display stimulus
-	    var html = '<div id="jspsych-html-button-response-stimulus">'+trial.stimulus+'</div>';
+	    display_element.innerHTML = '<div id="jspsych-html-button-response-stimulus">'+trial.stimulus+'</div>';
 	
 	    //display buttons
 	    var buttons = [];
@@ -17305,35 +17125,30 @@ return /******/ (function(modules) { // webpackBootstrap
 	        buttons.push(trial.button_html);
 	      }
 	    }
-	    html += '<div id="jspsych-html-button-response-btngroup">';
+	    display_element.innerHTML += '<div id="jspsych-html-button-response-btngroup"></div>';
 	    for (var i = 0; i < trial.choices.length; i++) {
 	      var str = buttons[i].replace(/%choice%/g, trial.choices[i]);
-	      html += '<div class="jspsych-html-button-response-button" style="display: inline-block; margin:'+trial.margin_vertical+' '+trial.margin_horizontal+'" id="jspsych-html-button-response-button-' + i +'" data-choice="'+i+'">'+str+'</div>';
-	    }
-	    html += '</div>';
-	
-	    //show prompt if there is one
-	    if (trial.prompt !== null) {
-	      html += trial.prompt;
-	    }
-	    display_element.innerHTML = html;
-	
-	    // start time
-	    var start_time = Date.now();
-	
-	    // add event listeners to buttons
-	    for (var i = 0; i < trial.choices.length; i++) {
+	      display_element.querySelector('#jspsych-html-button-response-btngroup').insertAdjacentHTML('beforeend',
+	        '<div class="jspsych-html-button-response-button" style="display: inline-block; margin:'+trial.margin_vertical+' '+trial.margin_horizontal+'" id="jspsych-html-button-response-button-' + i +'" data-choice="'+i+'">'+str+'</div>');
 	      display_element.querySelector('#jspsych-html-button-response-button-' + i).addEventListener('click', function(e){
 	        var choice = e.currentTarget.getAttribute('data-choice'); // don't use dataset for jsdom compatibility
 	        after_response(choice);
 	      });
 	    }
 	
+	    //show prompt if there is one
+	    if (trial.prompt !== "") {
+	      display_element.insertAdjacentHTML('beforeend', trial.prompt);
+	    }
+	
 	    // store response
 	    var response = {
-	      rt: null,
-	      button: null
+	      rt: -1,
+	      button: -1
 	    };
+	
+	    // start time
+	    var start_time = 0;
 	
 	    // function to handle responses by the subject
 	    function after_response(choice) {
@@ -17380,15 +17195,18 @@ return /******/ (function(modules) { // webpackBootstrap
 	      jsPsych.finishTrial(trial_data);
 	    };
 	
+	    // start timing
+	    start_time = Date.now();
+	
 	    // hide image if timing is set
-	    if (trial.stimulus_duration !== null) {
+	    if (trial.stimulus_duration > 0) {
 	      jsPsych.pluginAPI.setTimeout(function() {
 	        display_element.querySelector('#jspsych-html-button-response-stimulus').style.visibility = 'hidden';
 	      }, trial.stimulus_duration);
 	    }
 	
 	    // end trial if time limit is set
-	    if (trial.trial_duration !== null) {
+	    if (trial.trial_duration > 0) {
 	      jsPsych.pluginAPI.setTimeout(function() {
 	        end_trial();
 	      }, trial.trial_duration);
@@ -17434,7 +17252,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	    parameters: {
 	      stimulus: {
 	        type: jsPsych.plugins.parameterType.HTML_STRING,
-	        pretty_name: 'Stimulus',
+	        pretty_name: 'stimulus',
 	        default: undefined,
 	        description: 'The HTML string to be displayed'
 	      },
@@ -17448,19 +17266,19 @@ return /******/ (function(modules) { // webpackBootstrap
 	      prompt: {
 	        type: jsPsych.plugins.parameterType.STRING,
 	        pretty_name: 'Prompt',
-	        default: null,
+	        default: '',
 	        description: 'Any content here will be displayed below the stimulus.'
 	      },
 	      stimulus_duration: {
 	        type: jsPsych.plugins.parameterType.INT,
 	        pretty_name: 'Stimulus duration',
-	        default: null,
+	        default: -1,
 	        description: 'How long to hide the stimulus.'
 	      },
 	      trial_duration: {
 	        type: jsPsych.plugins.parameterType.INT,
 	        pretty_name: 'Trial duration',
-	        default: null,
+	        default: -1,
 	        description: 'How long to show trial before it ends.'
 	      },
 	      response_ends_trial: {
@@ -17478,17 +17296,15 @@ return /******/ (function(modules) { // webpackBootstrap
 	    var new_html = '<div id="jspsych-html-keyboard-response-stimulus">'+trial.stimulus+'</div>';
 	
 	    // add prompt
-	    if(trial.prompt !== null){
-	      new_html += trial.prompt;
-	    }
+	    new_html += trial.prompt;
 	
 	    // draw
 	    display_element.innerHTML = new_html;
 	
 	    // store response
 	    var response = {
-	      rt: null,
-	      key: null
+	      rt: -1,
+	      key: -1
 	    };
 	
 	    // function to end trial when it is time
@@ -17524,7 +17340,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	      display_element.querySelector('#jspsych-html-keyboard-response-stimulus').className += ' responded';
 	
 	      // only record the first response
-	      if (response.key == null) {
+	      if (response.key == -1) {
 	        response = info;
 	      }
 	
@@ -17545,14 +17361,14 @@ return /******/ (function(modules) { // webpackBootstrap
 	    }
 	
 	    // hide stimulus if stimulus_duration is set
-	    if (trial.stimulus_duration !== null) {
+	    if (trial.stimulus_duration > 0) {
 	      jsPsych.pluginAPI.setTimeout(function() {
 	        display_element.querySelector('#jspsych-html-keyboard-response-stimulus').style.visibility = 'hidden';
 	      }, trial.stimulus_duration);
 	    }
 	
 	    // end trial if trial_duration is set
-	    if (trial.trial_duration !== null) {
+	    if (trial.trial_duration > 0) {
 	      jsPsych.pluginAPI.setTimeout(function() {
 	        end_trial();
 	      }, trial.trial_duration);
@@ -17614,12 +17430,6 @@ return /******/ (function(modules) { // webpackBootstrap
 	        default: 100,
 	        description: 'Sets the maximum value of the slider',
 	      },
-	      start: {
-	        type: jsPsych.plugins.parameterType.INT,
-	        pretty_name: 'Slider starting value',
-	        default: 50,
-	        description: 'Sets the starting value of the slider',
-	      },
 	      step: {
 	        type: jsPsych.plugins.parameterType.INT,
 	        pretty_name: 'Step',
@@ -17643,19 +17453,19 @@ return /******/ (function(modules) { // webpackBootstrap
 	      prompt: {
 	        type: jsPsych.plugins.parameterType.STRING,
 	        pretty_name: 'Prompt',
-	        default: null,
+	        default: '',
 	        description: 'Any content here will be displayed below the slider.'
 	      },
 	      stimulus_duration: {
 	        type: jsPsych.plugins.parameterType.INT,
 	        pretty_name: 'Stimulus duration',
-	        default: null,
+	        default: -1,
 	        description: 'How long to hide the stimulus.'
 	      },
 	      trial_duration: {
 	        type: jsPsych.plugins.parameterType.INT,
 	        pretty_name: 'Trial duration',
-	        default: null,
+	        default: -1,
 	        description: 'How long to show the trial.'
 	      },
 	      response_ends_trial: {
@@ -17672,7 +17482,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	    var html = '<div id="jspsych-html-slider-response-wrapper" style="margin: 100px 0px;">';
 	    html += '<div id="jspsych-html-slider-response-stimulus">' + trial.stimulus + '</div>';
 	    html += '<div class="jspsych-html-slider-response-container" style="position:relative;">';
-	    html += '<input type="range" value="'+trial.start+'" min="'+trial.min+'" max="'+trial.max+'" step="'+trial.step+'" style="width: 100%;" id="jspsych-html-slider-response-response"></input>';
+	    html += '<input type="range" min="'+trial.min+'" max="'+trial.max+'" step="'+trial.step+'" style="width: 100%;" id="jspsych-html-slider-response-response"></input>';
 	    html += '<div>'
 	    for(var j=0; j < trial.labels.length; j++){
 	      var width = 100/(trial.labels.length-1);
@@ -17685,9 +17495,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	    html += '</div>';
 	    html += '</div>';
 	
-	    if (trial.prompt !== null){
-	      html += trial.prompt;
-	    }
+	    html += trial.prompt;
 	
 	    // add submit button
 	    html += '<button id="jspsych-html-slider-response-next" class="jspsych-btn">'+trial.button_label+'</button>';
@@ -17695,8 +17503,8 @@ return /******/ (function(modules) { // webpackBootstrap
 	    display_element.innerHTML = html;
 	
 	    var response = {
-	      rt: null,
-	      response: null
+	      rt: -1,
+	      response: -1
 	    };
 	
 	    display_element.querySelector('#jspsych-html-slider-response-next').addEventListener('click', function() {
@@ -17720,8 +17528,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	      // save data
 	      var trialdata = {
 	        "rt": response.rt,
-	        "response": response.response,
-	        "stimulus": trial.stimulus
+	        "response": response.response
 	      };
 	
 	      display_element.innerHTML = '';
@@ -17730,14 +17537,14 @@ return /******/ (function(modules) { // webpackBootstrap
 	      jsPsych.finishTrial(trialdata);
 	    }
 	
-	    if (trial.stimulus_duration !== null) {
+	    if (trial.stimulus_duration > 0) {
 	      jsPsych.pluginAPI.setTimeout(function() {
 	        display_element.querySelector('#jspsych-html-slider-response-stimulus').style.visibility = 'hidden';
 	      }, trial.stimulus_duration);
 	    }
 	
 	    // end trial if trial_duration is set
-	    if (trial.trial_duration !== null) {
+	    if (trial.trial_duration > 0) {
 	      jsPsych.pluginAPI.setTimeout(function() {
 	        end_trial();
 	      }, trial.trial_duration);
@@ -17861,7 +17668,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	      trial_duration: {
 	        type: jsPsych.plugins.parameterType.INT,
 	        pretty_name: 'Trial duration',
-	        default: null,
+	        default: -1,
 	        description: 'How long to show the trial.'
 	      },
 	    }
@@ -17912,8 +17719,8 @@ return /******/ (function(modules) { // webpackBootstrap
 	
 	    // store response
 	    var response = {
-	      rt: null,
-	      key: null,
+	      rt: -1,
+	      key: -1,
 	      correct: false
 	    };
 	
@@ -17954,12 +17761,12 @@ return /******/ (function(modules) { // webpackBootstrap
 	      display_element.querySelector('#jspsych-iat-stim').className += ' responded';
 	
 	      // only record the first response
-	      if (response.key == null ) {
+	      if (response.key == -1 ) {
 	        response = info;
 	      }
 	
 	      if(trial.stim_key_association == "right") {
-	        if(response.rt !== null && response.key == rightKeyCode) {
+	        if(response.rt > -1 && response.key == rightKeyCode) {
 	          response.correct = true;
 	          if (trial.response_ends_trial) {
 	            end_trial();
@@ -17991,7 +17798,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	          }
 	        }
 	      } else if(trial.stim_key_association == "left") {
-	        if(response.rt !== null && response.key == leftKeyCode) {
+	        if(response.rt > -1 && response.key == leftKeyCode) {
 	          response.correct = true;
 	          if (trial.response_ends_trial) {
 	            end_trial();
@@ -18037,7 +17844,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	    }
 	
 	    // end trial if time limit is set
-	    if (trial.trial_duration !== null && trial.response_ends_trial != true) {
+	    if (trial.trial_duration > 0 && trial.response_ends_trial != true) {
 	      jsPsych.pluginAPI.setTimeout(function() {
 	        end_trial();
 	      }, trial.trial_duration);
@@ -18162,7 +17969,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	      trial_duration: {
 	        type: jsPsych.plugins.parameterType.INT,
 	        pretty_name: 'Trial duration',
-	        default: null,
+	        default: -1,
 	        description: 'How long to show the trial.'
 	      },
 	    }
@@ -18213,8 +18020,8 @@ return /******/ (function(modules) { // webpackBootstrap
 	
 	    // store response
 	    var response = {
-	      rt: null,
-	      key: null,
+	      rt: -1,
+	      key: -1,
 	      correct: false
 	    };
 	
@@ -18255,12 +18062,12 @@ return /******/ (function(modules) { // webpackBootstrap
 	      display_element.querySelector('#jspsych-iat-stim').className += ' responded';
 	
 	      // only record the first response
-	      if (response.key == null ) {
+	      if (response.key == -1 ) {
 	        response = info;
 	      }
 	
 	      if(trial.stim_key_association == "right") {
-	        if(response.rt !== null && response.key == rightKeyCode) {
+	        if(response.rt > -1 && response.key == rightKeyCode) {
 	          response.correct = true;
 	          if (trial.response_ends_trial) {
 	            end_trial();
@@ -18292,7 +18099,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	          }
 	        }
 	      } else if(trial.stim_key_association == "left") {
-	        if(response.rt !== null && response.key == leftKeyCode) {
+	        if(response.rt > -1 && response.key == leftKeyCode) {
 	          response.correct = true;
 	          if (trial.response_ends_trial) {
 	            end_trial();
@@ -18338,7 +18145,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	    }
 	
 	    // end trial if time limit is set
-	    if (trial.trial_duration !== null && trial.response_ends_trial != true) {
+	    if (trial.trial_duration > 0 && trial.response_ends_trial != true) {
 	      jsPsych.pluginAPI.setTimeout(function() {
 	        end_trial();
 	      }, trial.trial_duration);
@@ -18386,7 +18193,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	    parameters: {
 	      stimulus: {
 	        type: jsPsych.plugins.parameterType.IMAGE,
-	        pretty_name: 'Stimulus',
+	        pretty_name: 'stimulus',
 	        default: undefined,
 	        description: 'The image to be displayed'
 	      },
@@ -18400,19 +18207,19 @@ return /******/ (function(modules) { // webpackBootstrap
 	      prompt: {
 	        type: jsPsych.plugins.parameterType.STRING,
 	        pretty_name: 'Prompt',
-	        default: null,
+	        default: '',
 	        description: 'Any content here will be displayed below the stimulus.'
 	      },
 	      stimulus_duration: {
 	        type: jsPsych.plugins.parameterType.INT,
 	        pretty_name: 'Stimulus duration',
-	        default: null,
+	        default: -1,
 	        description: 'How long to hide the stimulus.'
 	      },
 	      trial_duration: {
 	        type: jsPsych.plugins.parameterType.INT,
 	        pretty_name: 'Trial duration',
-	        default: null,
+	        default: -1,
 	        description: 'How long to show trial before it ends.'
 	      },
 	      response_ends_trial: {
@@ -18429,17 +18236,15 @@ return /******/ (function(modules) { // webpackBootstrap
 	    var new_html = '<img src="'+trial.stimulus+'" id="jspsych-image-keyboard-response-stimulus"></img>';
 	
 	    // add prompt
-	    if (trial.prompt !== null){
-	      new_html += trial.prompt;
-	    }
+	    new_html += trial.prompt;
 	
 	    // draw
 	    display_element.innerHTML = new_html;
 	
 	    // store response
 	    var response = {
-	      rt: null,
-	      key: null
+	      rt: -1,
+	      key: -1
 	    };
 	
 	    // function to end trial when it is time
@@ -18475,7 +18280,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	      display_element.querySelector('#jspsych-image-keyboard-response-stimulus').className += ' responded';
 	
 	      // only record the first response
-	      if (response.key == null) {
+	      if (response.key == -1) {
 	        response = info;
 	      }
 	
@@ -18496,14 +18301,14 @@ return /******/ (function(modules) { // webpackBootstrap
 	    }
 	
 	    // hide stimulus if stimulus_duration is set
-	    if (trial.stimulus_duration !== null) {
+	    if (trial.stimulus_duration > 0) {
 	      jsPsych.pluginAPI.setTimeout(function() {
 	        display_element.querySelector('#jspsych-image-keyboard-response-stimulus').style.visibility = 'hidden';
 	      }, trial.stimulus_duration);
 	    }
 	
 	    // end trial if trial_duration is set
-	    if (trial.trial_duration !== null) {
+	    if (trial.trial_duration > 0) {
 	      jsPsych.pluginAPI.setTimeout(function() {
 	        end_trial();
 	      }, trial.trial_duration);
@@ -18567,12 +18372,6 @@ return /******/ (function(modules) { // webpackBootstrap
 	        default: 100,
 	        description: 'Sets the maximum value of the slider',
 	      },
-	      start: {
-					type: jsPsych.plugins.parameterType.INT,
-					pretty_name: 'Slider starting value',
-					default: 50,
-					description: 'Sets the starting value of the slider',
-				},
 	      step: {
 	        type: jsPsych.plugins.parameterType.INT,
 	        pretty_name: 'Step',
@@ -18596,19 +18395,19 @@ return /******/ (function(modules) { // webpackBootstrap
 	      prompt: {
 	        type: jsPsych.plugins.parameterType.STRING,
 	        pretty_name: 'Prompt',
-	        default: null,
+	        default: '',
 	        description: 'Any content here will be displayed below the slider.'
 	      },
 	      stimulus_duration: {
 	        type: jsPsych.plugins.parameterType.INT,
 	        pretty_name: 'Stimulus duration',
-	        default: null,
+	        default: -1,
 	        description: 'How long to hide the stimulus.'
 	      },
 	      trial_duration: {
 	        type: jsPsych.plugins.parameterType.INT,
 	        pretty_name: 'Trial duration',
-	        default: null,
+	        default: -1,
 	        description: 'How long to show the trial.'
 	      },
 	      response_ends_trial: {
@@ -18625,7 +18424,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	    var html = '<div id="jspsych-image-slider-response-wrapper" style="margin: 100px 0px;">';
 	    html += '<div id="jspsych-image-slider-response-stimulus"><img src="' + trial.stimulus + '"></div>';
 	    html += '<div class="jspsych-image-slider-response-container" style="position:relative;">';
-	    html += '<input type="range" value="'+trial.start+'" min="'+trial.min+'" max="'+trial.max+'" step="'+trial.step+'" style="width: 100%;" id="jspsych-image-slider-response-response"></input>';
+	    html += '<input type="range" min="'+trial.min+'" max="'+trial.max+'" step="'+trial.step+'" style="width: 100%;" id="jspsych-image-slider-response-response"></input>';
 	    html += '<div>'
 	    for(var j=0; j < trial.labels.length; j++){
 	      var width = 100/(trial.labels.length-1);
@@ -18638,9 +18437,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	    html += '</div>';
 	    html += '</div>';
 	
-	    if (trial.prompt !== null){
-	      html += trial.prompt;
-	    }
+	    html += trial.prompt;
 	
 	    // add submit button
 	    html += '<button id="jspsych-image-slider-response-next" class="jspsych-btn">'+trial.button_label+'</button>';
@@ -18648,8 +18445,8 @@ return /******/ (function(modules) { // webpackBootstrap
 	    display_element.innerHTML = html;
 	
 	    var response = {
-	      rt: null,
-	      response: null
+	      rt: -1,
+	      response: -1
 	    };
 	
 	    display_element.querySelector('#jspsych-image-slider-response-next').addEventListener('click', function() {
@@ -18682,14 +18479,14 @@ return /******/ (function(modules) { // webpackBootstrap
 	      jsPsych.finishTrial(trialdata);
 	    }
 	
-	    if (trial.stimulus_duration !== null) {
+	    if (trial.stimulus_duration > 0) {
 	      jsPsych.pluginAPI.setTimeout(function() {
 	        display_element.querySelector('#jspsych-image-slider-response-stimulus').style.visibility = 'hidden';
 	      }, trial.stimulus_duration);
 	    }
 	
 	    // end trial if trial_duration is set
-	    if (trial.trial_duration !== null) {
+	    if (trial.trial_duration > 0) {
 	      jsPsych.pluginAPI.setTimeout(function() {
 	        end_trial();
 	      }, trial.trial_duration);
@@ -18707,14 +18504,11 @@ return /******/ (function(modules) { // webpackBootstrap
 /* 117 */
 /***/ (function(module, exports, __webpack_require__) {
 
-	var __WEBPACK_AMD_DEFINE_FACTORY__, __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_DEFINE_RESULT__;/* jspsych-instructions.js
+	var __WEBPACK_AMD_DEFINE_FACTORY__, __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_DEFINE_RESULT__;/* jspsych-text.js
 	 * Josh de Leeuw
 	 *
 	 * This plugin displays text (including HTML formatted strings) during the experiment.
 	 * Use it to show instructions, provide performance feedback, etc...
-	 *
-	 * Page numbers can be displayed to help with navigation by setting show_page_number
-	 * to true.
 	 *
 	 * documentation: docs.jspsych.org
 	 *
@@ -18775,12 +18569,6 @@ return /******/ (function(modules) { // webpackBootstrap
 	        default: false,
 	        description: 'If true, then a "Previous" and "Next" button will be displayed beneath the instructions.'
 	      },
-	      show_page_number: {
-	          type: jsPsych.plugins.parameterType.BOOL,
-	          pretty_name: 'Show page number',
-	          default: false,
-	          description: 'If true, and clickable navigation is enabled, then Page x/y will be shown between the nav buttons.'
-	      },
 	      button_label_previous: {
 	        type: jsPsych.plugins.parameterType.STRING,
 	        pretty_name: 'Button label previous',
@@ -18817,43 +18605,24 @@ return /******/ (function(modules) { // webpackBootstrap
 	    }
 	
 	    function show_current_page() {
-	      var html = trial.pages[current_page];
+	      display_element.innerHTML = trial.pages[current_page];
 	
-	      var pagenum_display = "";
-	      if(trial.show_page_number) {
-	          pagenum_display = "<span style='margin: 0 1em;' class='"+
-	          "jspsych-instructions-pagenum'>Page "+(current_page+1)+"/"+trial.pages.length+"</span>";
-	      }
-	     
 	      if (trial.show_clickable_nav) {
 	
 	        var nav_html = "<div class='jspsych-instructions-nav' style='padding: 10px 0px;'>";
-	        if (trial.allow_backward) {
-	          var allowed = (current_page > 0 )? '' : "disabled='disabled'";
-	          nav_html += "<button id='jspsych-instructions-back' class='jspsych-btn' style='margin-right: 5px;' "+allowed+">&lt; "+trial.button_label_previous+"</button>";
+	        if (current_page != 0 && trial.allow_backward) {
+	          nav_html += "<button id='jspsych-instructions-back' class='jspsych-btn' style='margin-right: 5px;'>&lt; "+trial.button_label_previous+"</button>";
 	        }
-	        if (trial.pages.length > 1 && trial.show_page_number) {
-	            nav_html += pagenum_display;
-	        }
-	        nav_html += "<button id='jspsych-instructions-next' class='jspsych-btn'"+
-	            "style='margin-left: 5px;'>"+trial.button_label_next+
-	            " &gt;</button></div>";
+	        nav_html += "<button id='jspsych-instructions-next' class='jspsych-btn' style='margin-left: 5px;'>"+trial.button_label_next+" &gt;</button></div>"
 	
-	        html += nav_html;
-	        display_element.innerHTML = html;
+	        display_element.innerHTML += nav_html;
+	
 	        if (current_page != 0 && trial.allow_backward) {
 	          display_element.querySelector('#jspsych-instructions-back').addEventListener('click', btnListener);
 	        }
 	
 	        display_element.querySelector('#jspsych-instructions-next').addEventListener('click', btnListener);
-	      } else {
-	        if (trial.show_page_number && trial.pages.length > 1) {
-	          // page numbers for non-mouse navigation
-	          html += "<div class='jspsych-instructions-pagenum'>"+pagenum_display+"</div>"
-	        } 
-	        display_element.innerHTML = html;
 	      }
-	      
 	    }
 	
 	    function next() {
@@ -18921,13 +18690,13 @@ return /******/ (function(modules) { // webpackBootstrap
 	        allow_held_key: false
 	      });
 	      // check if key is forwards or backwards and update page
-	      if (jsPsych.pluginAPI.compareKeys(info.key, trial.key_backward)) {
+	      if (info.key === trial.key_backward || info.key === jsPsych.pluginAPI.convertKeyCharacterToKeyCode(trial.key_backward)) {
 	        if (current_page !== 0 && trial.allow_backward) {
 	          back();
 	        }
 	      }
 	
-	      if (jsPsych.pluginAPI.compareKeys(info.key, trial.key_forward)) {
+	      if (info.key === trial.key_forward || info.key === jsPsych.pluginAPI.convertKeyCharacterToKeyCode(trial.key_forward)) {
 	        next();
 	      }
 	
@@ -19075,9 +18844,6 @@ return /******/ (function(modules) { // webpackBootstrap
 	      var endTime = (new Date()).getTime();
 	      var response_time = endTime - startTime;
 	
-	      // clear keyboard response
-	      jsPsych.pluginAPI.cancelKeyboardResponse(key_listener);
-	
 	      // save data
 	      var trial_data = {
 	        "rt": response_time,
@@ -19146,7 +18912,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	      prompt: {
 	        type: jsPsych.plugins.parameterType.STRING,
 	        pretty_name: 'Prompt',
-	        default: null,
+	        default: '',
 	        description: 'The content displayed below the resizable box and above the button.'
 	      },
 	      pixels_per_unit: {
@@ -19187,9 +18953,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	    var html ='<div id="jspsych-resize-div" style="border: 2px solid steelblue; height: '+start_div_height+'px; width:'+start_div_width+'px; margin: 7px auto; background-color: lightsteelblue; position: relative;">';
 	    html += '<div id="jspsych-resize-handle" style="cursor: nwse-resize; background-color: steelblue; width: 10px; height: 10px; border: 2px solid lightsteelblue; position: absolute; bottom: 0; right: 0;"></div>';
 	    html += '</div>';
-	    if (trial.prompt !== null){
-	      html += trial.prompt;
-	    }
+	    html += trial.prompt;
 	    html += '<a class="jspsych-btn" id="jspsych-resize-btn">'+trial.button_label+'</a>';
 	
 	    // render
@@ -19310,7 +19074,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	  var plugin = {};
 	
 	  plugin.info = {
-	    name: 'same-different-html',
+	    name: 'same-different-image',
 	    description: '',
 	    parameters: {
 	      stimuli: {
@@ -19360,7 +19124,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	      prompt: {
 	        type: jsPsych.plugins.parameterType.STRING,
 	        pretty_name: 'Prompt',
-	        default: null,
+	        default: '',
 	        description: 'Any content here will be displayed below the stimulus.'
 	      }
 	    }
@@ -19399,12 +19163,8 @@ return /******/ (function(modules) { // webpackBootstrap
 	
 	    function showSecondStim() {
 	
-	      var html = '<div class="jspsych-same-different-stimulus">'+trial.stimuli[1]+'</div>';
-	      //show prompt here
-	      if (trial.prompt !== null) {
-	        html += trial.prompt;
-	      }
-	      display_element.innerHTML = html;
+	      display_element.innerHTML += '<div class="jspsych-same-different-stimulus">'+trial.stimuli[1]+'</div>';
+	
 	
 	      if (trial.second_stim_duration > 0) {
 	        jsPsych.pluginAPI.setTimeout(function() {
@@ -19412,7 +19172,10 @@ return /******/ (function(modules) { // webpackBootstrap
 	        }, trial.second_stim_duration);
 	      }
 	
-	
+	      //show prompt here
+	      if (trial.prompt !== "") {
+	        display_element.innerHTML += trial.prompt;
+	      }
 	
 	      var after_response = function(info) {
 	
@@ -19493,18 +19256,18 @@ return /******/ (function(modules) { // webpackBootstrap
 	
 	  var plugin = {};
 	
-	  jsPsych.pluginAPI.registerPreload('same-different-image', 'stimuli', 'image')
+	  jsPsych.pluginAPI.registerPreload('same-different', 'stimuli', 'image')
 	
 	  plugin.info = {
 	    name: 'same-different-image',
 	    description: '',
 	    parameters: {
 	      stimuli: {
-	        type: jsPsych.plugins.parameterType.IMAGE,
+	        type: jsPsych.plugins.parameterType.HTML_STRING,
 	        pretty_name: 'Stimuli',
 	        default: undefined,
 	        array: true,
-	        description: 'The images to be displayed.'
+	        description: 'The image to be displayed.'
 	      },
 	      answer: {
 	        type: jsPsych.plugins.parameterType.SELECT,
@@ -19546,7 +19309,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	      prompt: {
 	        type: jsPsych.plugins.parameterType.STRING,
 	        pretty_name: 'Prompt',
-	        default: null,
+	        default: '',
 	        description: 'Any content here will be displayed below the stimulus.'
 	      }
 	    }
@@ -19585,18 +19348,18 @@ return /******/ (function(modules) { // webpackBootstrap
 	
 	    function showSecondStim() {
 	
-	      var html = '<img class="jspsych-same-different-stimulus" src="'+trial.stimuli[1]+'"></img>';
-	      //show prompt
-	      if (trial.prompt !== null) {
-	        html += trial.prompt;
-	      }
+	      display_element.innerHTML += '<img class="jspsych-same-different-stimulus" src="'+trial.stimuli[1]+'"></img>';
 	
-	      display_element.innerHTML = html;
 	
 	      if (trial.second_stim_duration > 0) {
 	        jsPsych.pluginAPI.setTimeout(function() {
 	          display_element.querySelector('.jspsych-same-different-stimulus').style.visibility = 'hidden';
 	        }, trial.second_stim_duration);
+	      }
+	
+	      //show prompt here
+	      if (trial.prompt !== "") {
+	        display_element.innerHTML += trial.prompt;
 	      }
 	
 	      var after_response = function(info) {
@@ -19723,13 +19486,13 @@ return /******/ (function(modules) { // webpackBootstrap
 	      trial_duration: {
 	        type: jsPsych.plugins.parameterType.INT,
 	        pretty_name: 'Trial duration',
-	        default: null,
+	        default: -1,
 	        description: 'How long to show the trial'
 	      },
 	      fade_duration: {
 	        type: jsPsych.plugins.parameterType.INT,
 	        pretty_name: 'Fade duration',
-	        default: null,
+	        default: -1,
 	        description: 'If a positive number, the target will progressively change color at the start of the trial, with the transition lasting this many milliseconds.'
 	      },
 	      allow_nontarget_responses: {
@@ -19741,7 +19504,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	      prompt: {
 	        type: jsPsych.plugins.parameterType.STRING,
 	        pretty_name: 'Prompt',
-	        default: null,
+	        default: '',
 	        description: 'Any content here will be displayed below the stimulus'
 	      },
 	    }
@@ -19751,9 +19514,9 @@ return /******/ (function(modules) { // webpackBootstrap
 	
 	    var startTime = -1;
 	    var response = {
-	      rt: null,
-	      row: null,
-	      column: null
+	      rt: -1,
+	      row: -1,
+	      column: -1
 	    }
 	
 	    // display stimulus
@@ -19770,7 +19533,7 @@ return /******/ (function(modules) { // webpackBootstrap
 			}
 	
 			//show prompt if there is one
-	    if (trial.prompt !== null) {
+	    if (trial.prompt !== "") {
 	      display_element.innerHTML += trial.prompt;
 	    }
 	
@@ -19797,14 +19560,14 @@ return /******/ (function(modules) { // webpackBootstrap
 	
 	      startTime = Date.now();
 	
-	      if(trial.fade_duration == null){
+	      if(trial.fade_duration == -1){
 	        display_element.querySelector('#jspsych-serial-reaction-time-stimulus-cell-'+trial.target[0]+'-'+trial.target[1]).style.backgroundColor = trial.target_color;
 	      } else {
 	        display_element.querySelector('#jspsych-serial-reaction-time-stimulus-cell-'+trial.target[0]+'-'+trial.target[1]).style.transition = "background-color "+trial.fade_duration;
 	        display_element.querySelector('#jspsych-serial-reaction-time-stimulus-cell-'+trial.target[0]+'-'+trial.target[1]).style.backgroundColor = trial.target_color;
 	      }
 	
-				if(trial.trial_duration !== null){
+				if(trial.trial_duration > -1){
 					jsPsych.pluginAPI.setTimeout(endTrial, trial.trial_duration);
 				}
 	
@@ -19837,7 +19600,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	    function after_response(info) {
 	
 				// only record first response
-	      response = response.rt == null ? info : response;
+	      response = response.rt == -1 ? info : response;
 	
 	      if (trial.response_ends_trial) {
 	        endTrial();
@@ -19959,7 +19722,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	      trial_duration: {
 	        type: jsPsych.plugins.parameterType.INT,
 	        pretty_name: 'Trial duration',
-	        default: null,
+	        default: -1,
 	        description: 'How long to show the trial.'
 	      },
 	      show_response_feedback: {
@@ -19977,13 +19740,13 @@ return /******/ (function(modules) { // webpackBootstrap
 	      fade_duration: {
 	        type: jsPsych.plugins.parameterType.INT,
 	        pretty_name: 'Fade duration',
-	        default: null,
+	        default: -1,
 	        description: 'If a positive number, the target will progressively change color at the start of the trial, with the transition lasting this many milliseconds.'
 	      },
 	      prompt: {
 	        type: jsPsych.plugins.parameterType.STRING,
 	        pretty_name: 'Prompt',
-	        default: null,
+	        default: '',
 	        no_function: false,
 	        description: ' Any content here will be displayed below the stimulus.'
 	      },
@@ -20011,20 +19774,20 @@ return /******/ (function(modules) { // webpackBootstrap
 			}
 	
 			//show prompt if there is one
-	    if (trial.prompt !== null) {
+	    if (trial.prompt !== "") {
 	      display_element.innerHTML += trial.prompt;
 	    }
 	
 			var keyboardListener = {};
 	
 	    var response = {
-	      rt: null,
+	      rt: -1,
 	      key: false,
 	      correct: false
 	    }
 	
 			function showTarget(){
-	      if(trial.fade_duration == null){
+	      if(trial.fade_duration == -1){
 	        display_element.querySelector('#jspsych-serial-reaction-time-stimulus-cell-'+trial.target[0]+'-'+trial.target[1]).style.backgroundColor = trial.target_color;
 	      } else {
 	        display_element.querySelector('#jspsych-serial-reaction-time-stimulus-cell-'+trial.target[0]+'-'+trial.target[1]).style.transition = "background-color "+trial.fade_duration;
@@ -20037,14 +19800,14 @@ return /******/ (function(modules) { // webpackBootstrap
 	        allow_held_key: false
 	      });
 	
-				if(trial.trial_duration > null){
+				if(trial.trial_duration > -1){
 					jsPsych.pluginAPI.setTimeout(showFeedback, trial.trial_duration);
 				}
 	
 			}
 	
 	    function showFeedback() {
-	      if(response.rt == null || trial.show_response_feedback == false){
+	      if(response.rt == -1 || trial.show_response_feedback == false){
 	        endTrial();
 	      } else {
 	        var color = response.correct ? '#0f0' : '#f00';
@@ -20085,7 +19848,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	    function after_response(info) {
 	
 				// only record first response
-	      response = response.rt == null ? info : response;
+	      response = response.rt == -1 ? info : response;
 	
 				// check if the response is correct
 				var responseLoc = [];
@@ -20198,7 +19961,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	      preamble: {
 	        type: jsPsych.plugins.parameterType.STRING,
 	        pretty_name: 'Preamble',
-	        default: null,
+	        default: '',
 	        description: 'String to display at top of the page.'
 	      },
 	      button_label: {
@@ -20226,9 +19989,8 @@ return /******/ (function(modules) { // webpackBootstrap
 	    html += '</style>';
 	
 	    // show preamble text
-	    if(trial.preamble !== null){
-	      html += '<div id="jspsych-survey-likert-preamble" class="jspsych-survey-likert-preamble">'+trial.preamble+'</div>';
-	    }
+	    html += '<div id="jspsych-survey-likert-preamble" class="jspsych-survey-likert-preamble">'+trial.preamble+'</div>';
+	
 	    html += '<form id="jspsych-survey-likert-form">';
 	
 	    // add likert scale questions
@@ -20355,7 +20117,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	      preamble: {
 	        type: jsPsych.plugins.parameterType.STRING,
 	        pretty_name: 'Preamble',
-	        default: null,
+	        default: '',
 	        description: 'HTML formatted string to display at the top of the page above all the questions.'
 	      },
 	      button_label: {
@@ -20391,9 +20153,8 @@ return /******/ (function(modules) { // webpackBootstrap
 	    var trial_form = display_element.querySelector("#" + trial_form_id);
 	    // show preamble text
 	    var preamble_id_name = _join(plugin_id_name, 'preamble');
-	    if(trial.preamble !== null){
-	      trial_form.innerHTML += '<div id="'+preamble_id_name+'" class="'+preamble_id_name+'">'+trial.preamble+'</div>';
-	    }
+	    trial_form.innerHTML += '<div id="'+preamble_id_name+'" class="'+preamble_id_name+'">'+trial.preamble+'</div>';
+	
 	    // add multiple-choice questions
 	    for (var i = 0; i < trial.questions.length; i++) {
 	        // create question container
@@ -20544,7 +20305,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	      preamble: {
 	        type: jsPsych.plugins.parameterType.STRING,
 	        pretty_name: 'Preamble',
-	        default: null,
+	        default: '',
 	        description: 'HTML formatted string to display at the top of the page above all the questions.'
 	      },
 	      button_label: {
@@ -20581,9 +20342,8 @@ return /******/ (function(modules) { // webpackBootstrap
 	    var trial_form = display_element.querySelector("#" + trial_form_id);
 	    // show preamble text
 	    var preamble_id_name = _join(plugin_id_name, 'preamble');
-	    if(trial.preamble !== null){
-	      trial_form.innerHTML += '<div id="'+preamble_id_name+'" class="'+preamble_id_name+'">'+trial.preamble+'</div>';
-	    }
+	    trial_form.innerHTML += '<div id="'+preamble_id_name+'" class="'+preamble_id_name+'">'+trial.preamble+'</div>';
+	
 	    // add multiple-select questions
 	    for (var i = 0; i < trial.questions.length; i++) {
 	      // create question container
@@ -20714,38 +20474,32 @@ return /******/ (function(modules) { // webpackBootstrap
 	        type: jsPsych.plugins.parameterType.COMPLEX,
 	        array: true,
 	        pretty_name: 'Questions',
-	        default: undefined,
 	        nested: {
-	          prompt: {
-	            type: jsPsych.plugins.parameterType.STRING,
-	            pretty_name: 'Prompt',
-	            default: undefined,
-	            description: 'Prompt for the subject to response'
-	          },
-	          value: {
-	            type: jsPsych.plugins.parameterType.STRING,
-	            pretty_name: 'Value',
-	            default: "",
-	            description: 'The string will be used to populate the response field with editable answer.'
-	          },
-	          rows: {
-	            type: jsPsych.plugins.parameterType.INT,
-	            pretty_name: 'Rows',
-	            default: 1,
-	            description: 'The number of rows for the response text box.'
-	          },
-	          columns: {
-	            type: jsPsych.plugins.parameterType.INT,
-	            pretty_name: 'Columns',
-	            default: 40,
-	            description: 'The number of columns for the response text box.'
-	          }
+	          prompt: {type: jsPsych.plugins.parameterType.STRING,
+	                   pretty_name: 'Prompt',
+	                   default: undefined,
+	                   description: 'Prompts for the the subject to response'},
+	          value: {type: jsPsych.plugins.parameterType.STRING,
+	                  pretty_name: 'Value',
+	                  array: true,
+	                  default: '',
+	                  description: 'The strings will be used to populate the response fields with editable answers.'},
+	          rows: {type: jsPsych.plugins.parameterType.INT,
+	                 pretty_name: 'Rows',
+	                 array: true,
+	                 default: 1,
+	                 description: 'The number of rows for the response text box.'},
+	          columns: {type: jsPsych.plugins.parameterType.INT,
+	                    pretty_name: 'Columns',
+	                    array: true,
+	                    default: 40,
+	                    description: 'The number of columns for the response text box.'}
 	        }
 	      },
 	      preamble: {
 	        type: jsPsych.plugins.parameterType.STRING,
 	        pretty_name: 'Preamble',
-	        default: null,
+	        default: '',
 	        description: 'HTML formatted string to display at the top of the page above all the questions.'
 	      },
 	      button_label: {
@@ -20759,36 +20513,37 @@ return /******/ (function(modules) { // webpackBootstrap
 	
 	  plugin.trial = function(display_element, trial) {
 	
-	    for (var i = 0; i < trial.questions.length; i++) {
-	      if (typeof trial.questions[i].rows == 'undefined') {
-	        trial.questions[i].rows = 1;
+	
+	    if (typeof trial.questions[0].rows == 'undefined') {
+	      trial.questions[0].rows = [];
+	      for (var i = 0; i < trial.questions.length; i++) {
+	        trial.questions[i].rows.push(1);
 	      }
 	    }
-	    for (var i = 0; i < trial.questions.length; i++) {
-	      if (typeof trial.questions[i].columns == 'undefined') {
-	        trial.questions[i].columns = 40;
+	    if (typeof trial.questions[0].columns == 'undefined') {
+	      trial.questions[0].columns = [];
+	      for (var i = 0; i < trial.questions.length; i++) {
+	        trial.questions[i].columns.push(40);
 	      }
 	    }
-	    for (var i = 0; i < trial.questions.length; i++) {
-	      if (typeof trial.questions[i].value == 'undefined') {
-	        trial.questions[i].value = "";
+	    if (typeof trial.questions[0].value == 'undefined') {
+	      trial.questions[0].value = [];
+	      for (var i = 0; i < trial.questions.length; i++) {
+	        trial.questions[i].value.push("");
 	      }
 	    }
 	
-	    var html = '';
 	    // show preamble text
-	    if(trial.preamble !== null){
-	      html += '<div id="jspsych-survey-text-preamble" class="jspsych-survey-text-preamble">'+trial.preamble+'</div>';
-	    }
+	    var html = '<div id="jspsych-survey-text-preamble" class="jspsych-survey-text-preamble">'+trial.preamble+'</div>';
+	
 	    // add questions
 	    for (var i = 0; i < trial.questions.length; i++) {
 	      html += '<div id="jspsych-survey-text-"'+i+'" class="jspsych-survey-text-question" style="margin: 2em 0em;">';
 	      html += '<p class="jspsych-survey-text">' + trial.questions[i].prompt + '</p>';
-	      var autofocus = i == 0 ? "autofocus" : "";
 	      if(trial.questions[i].rows == 1){
-	        html += '<input type="text" name="#jspsych-survey-text-response-' + i + '" size="'+trial.questions[i].columns+'" value="'+trial.questions[i].value+'" '+autofocus+'></input>';
+	        html += '<input type="text" name="#jspsych-survey-text-response-' + i + '" size="'+trial.questions[i].columns+'">'+trial.questions[i].value+'</input>';
 	      } else {
-	        html += '<textarea name="#jspsych-survey-text-response-' + i + '" cols="' + trial.questions[i].columns + '" rows="' + trial.questions[i].rows + '" '+autofocus+'>'+trial.questions[i].value+'</textarea>';
+	        html += '<textarea name="#jspsych-survey-text-response-' + i + '" cols="' + trial.questions[i].columns + '" rows="' + trial.questions[i].rows + '">'+trial.questions[i].value+'</textarea>';
 	      }
 	      html += '</div>';
 	    }
@@ -20897,19 +20652,19 @@ return /******/ (function(modules) { // webpackBootstrap
 	      prompt: {
 	        type: jsPsych.plugins.parameterType.STRING,
 	        pretty_name: 'Prompt',
-	        default: null,
+	        default: '',
 	        description: 'Any content here will be displayed below the video content.'
 	      },
 	      start: {
 	        type: jsPsych.plugins.parameterType.FLOAT,
 	        pretty_name: 'Start',
-	        default: null,
+	        default: false,
 	        description: 'Time to start the clip.'
 	      },
 	      stop: {
 	        type: jsPsych.plugins.parameterType.FLOAT,
 	        pretty_name: 'Stop',
-	        default: null,
+	        default: false,
 	        description: 'Time to stop the clip.'
 	      }
 	    }
@@ -20938,26 +20693,22 @@ return /******/ (function(modules) { // webpackBootstrap
 	      // adding start stop parameters if specified
 	      video_html+='<source src="'+trial.sources[i]
 	
-	      /*
-	      // this isn't implemented yet in all browsers, but when it is
-	      // revert to this way of doing it.
-	
-	      if (trial.start !== null) {
+	      if (trial.start) {
 	        video_html+= '#t=' + trial.start;
 	      } else {
 	        video_html+= '#t=0';
 	      }
 	
-	      if (trial.stop !== null) {
+	      if (trial.stop) {
 	        video_html+= ',' + trial.stop
-	      }*/
+	      }
 	
 	      video_html+='" type="video/'+type+'">';
 	    }
 	    video_html +="</video>"
 	
 	    //show prompt if there is one
-	    if (trial.prompt !== null) {
+	    if (trial.prompt !== "") {
 	      video_html += trial.prompt;
 	    }
 	
@@ -20969,16 +20720,12 @@ return /******/ (function(modules) { // webpackBootstrap
 	
 	    // event handler to set timeout to end trial if video is stopped
 	    display_element.querySelector('#jspsych-video-player').onplay = function(){
-	      if(trial.stop !== null){
-	        if(trial.start == null){
+	      if(trial.stop != false){
+	        if(trial.start == false){
 	          trial.start = 0;
 	        }
 	        jsPsych.pluginAPI.setTimeout(end_trial, (trial.stop-trial.start)*1000);
 	      }
-	    }
-	
-	    if(trial.start !== null){
-	      display_element.querySelector('#jspsych-video-player').currentTime = trial.start;
 	    }
 	
 	    // function to end trial when it is time
@@ -21102,12 +20849,12 @@ return /******/ (function(modules) { // webpackBootstrap
 	        type: jsPsych.plugins.parameterType.KEYCODE,
 	        pretty_name: 'Target absent key',
 	        default: 'f',
-	        description: 'The key to press if the target is not present in the search array.'
+	        description: 'The key to press if the the target is not present in the search array.'
 	      },
 	      trial_duration: {
 	        type: jsPsych.plugins.parameterType.INT,
 	        pretty_name: 'Trial duration',
-	        default: null,
+	        default: -1,
 	        description: 'The maximum duration to wait for a response.'
 	      },
 	      fixation_duration: {
@@ -21187,6 +20934,10 @@ return /******/ (function(modules) { // webpackBootstrap
 	
 	        paper.innerHTML += "<img src='"+to_present[i]+"' style='position: absolute; top:"+display_locs[i][0]+"px; left:"+display_locs[i][1]+"px; width:"+trial.target_size[0]+"px; height:"+trial.target_size[1]+"px;'></img>";
 	
+	        //var img = paper.image(to_present[i], display_locs[i][0], display_locs[i][1], trial.target_size[0], trial.target_size[1]);
+	
+	        //search_array_images.push(img);
+	
 	      }
 	
 	      var trial_over = false;
@@ -21195,11 +20946,11 @@ return /******/ (function(modules) { // webpackBootstrap
 	
 	        trial_over = true;
 	
-	        var correct = false;
+	        var correct = 0;
 	
-	        if (jsPsych.pluginAPI.compareKeys(info.key,trial.target_present_key) && trial.target_present ||
-	            jsPsych.pluginAPI.compareKeys(info.key,trial.target_absent_key) && !trial.target_present) {
-	          correct = true;
+	        if (info.key == trial.target_present_key && trial.target_present ||
+	          info.key == trial.target_absent_key && !trial.target_present) {
+	          correct = 1;
 	        }
 	
 	        clear_display();
@@ -21218,26 +20969,43 @@ return /******/ (function(modules) { // webpackBootstrap
 	        allow_held_key: false
 	      });
 	
-	      if (trial.trial_duration !== null) {
+	      if (trial.trial_duration > -1) {
 	
-	        jsPsych.pluginAPI.setTimeout(function() {
-	
+	        if (trial.trial_duration == 0) {
 	          if (!trial_over) {
 	
 	            jsPsych.pluginAPI.cancelKeyboardResponse(key_listener);
 	
 	            trial_over = true;
 	
-	            var rt = null;
+	            var rt = -1;
 	            var correct = 0;
-	            var key_press = null;
+	            var key_press = -1;
 	
 	            clear_display();
 	
 	            end_trial(rt, correct, key_press);
 	          }
-	        }, trial.trial_duration);
+	        } else {
 	
+	          jsPsych.pluginAPI.setTimeout(function() {
+	
+	            if (!trial_over) {
+	
+	              jsPsych.pluginAPI.cancelKeyboardResponse(key_listener);
+	
+	              trial_over = true;
+	
+	              var rt = -1;
+	              var correct = 0;
+	              var key_press = -1;
+	
+	              clear_display();
+	
+	              end_trial(rt, correct, key_press);
+	            }
+	          }, trial.trial_duration);
+	        }
 	      }
 	
 	      function clear_display() {
