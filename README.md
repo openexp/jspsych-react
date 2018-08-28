@@ -46,4 +46,4 @@ You can also import the jsPsych object to access other jsPsych functionality, su
 | plugins  | `object` | `null`     | Custom plugins to be passed to jsPsych for use in the experiment. Object keys should match the names of the plugins referenced in the timeline.
 
 # License
-MIT © [Teon Brooks](http://teonbrooks.github.io/)
+MIT ï¿½ [Teon Brooks](http://teonbrooks.github.io/)

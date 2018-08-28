@@ -1,6 +1,6 @@
 {
   "name": "jspsych-react",
-  "version": "0.1.1",
+  "version": "0.2.1",
   "description": "A simple React component for jspsych",
   "main": "dist/experiment.js",
   "repository": "git@github.com:makebrainwaves/jspsych-react.git",
@@ -42,7 +42,7 @@
     "webpack-dev-server": "^1.14.0"
   },
   "dependencies": {
-    "jspsych": "git://github.com/makebrainwaves/jspsych.git#jspsych-react@0.1",
+    "jspsych": "git://github.com/makebrainwaves/jspsych.git#jspsych-react@0.1.2",
     "react": "^0.14.3"
   }
 }
