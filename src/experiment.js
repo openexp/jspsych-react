@@ -3,59 +3,66 @@ import jsPsych from "jspsych";
 import plugins from "./plugins"; // load all built-in plugins
 
 class Experiment extends Component {
-  constructor(props) {
-    super(props);
-    const default_timeline = [
-      {
-        type: "html-keyboard-response",
-        stimulus: "This is the default timeline."
-      }
-    ];
+    constructor(props) {
+        super(props);
+        const default_timeline = [
+            {
+                type: "html-keyboard-response",
+                stimulus: "This is the default timeline."
+            }
+        ];
 
-    Object.assign(jsPsych.plugins, plugins, props.plugins);
+        Object.assign(jsPsych.plugins, plugins, props.plugins);
 
-    this.handleKeyEvent = e => {
-      if (e.redispatched) {
-        return;
-      }
-      let new_event = new e.constructor(e.type, e);
-      new_event.redispatched = true;
-      this.experimentDiv.dispatchEvent(new_event);
-    };
+        console.log(jsPsych.plugins);
 
-    this.experimentDiv = null;
-    this.width = props.width || "100%";
-    this.height = props.height || "100%";
+        this.handleKeyEvent = e => {
+            if (e.redispatched) {
+                return;
+            }
+            let new_event = new e.constructor(e.type, e);
+            new_event.redispatched = true;
+            this.experimentDiv.dispatchEvent(new_event);
+        };
 
-    this.settings = {
-      ...props.settings,
-      timeline: props.settings.timeline || default_timeline
-    };
-  }
+        this.experimentDiv = null;
+        this.width = props.width || "100%";
+        this.height = props.height || "100%";
 
-  render() {
-    return (
-      <div
-        id="experiment"
-        style={{ height: this.height, width: this.width }}
-        ref={e => {
-          this.experimentDiv = e;
-        }}
-      />
-    );
-  }
+        this.settings = {
+            ...props.settings,
+            timeline: props.settings.timeline || default_timeline
+        };
+    }
 
-  componentDidMount() {
-    window.addEventListener("keyup", this.handleKeyEvent, true);
-    window.addEventListener("keydown", this.handleKeyEvent, true);
-    jsPsych.init({ ...this.settings, display_element: this.experimentDiv });
-  }
+    render() {
+        return (
+            <div
+                id="experiment"
+                style={{ height: this.height, width: this.width }}
+                ref={e => {
+                    this.experimentDiv = e;
+                }}
+            />
+        );
+    }
 
-  componentWillUnmount() {
-    window.removeEventListener("keyup", this.handleKeyEvent, true);
-    window.removeEventListener("keydown", this.handleKeyEvent, true);
-    jsPsych.endExperiment("Ended Experiment");
-  }
+    componentDidMount() {
+        window.addEventListener("keyup", this.handleKeyEvent, true);
+        window.addEventListener("keydown", this.handleKeyEvent, true);
+        jsPsych.init({ ...this.settings, display_element: this.experimentDiv });
+    }
+
+    componentWillUnmount() {
+        window.removeEventListener("keyup", this.handleKeyEvent, true);
+        window.removeEventListener("keydown", this.handleKeyEvent, true);
+        try {
+            console.log(jsPsych.progress());
+            jsPsych.endExperiment("Ended Experiment");
+        } catch (e) {
+            console.log("Experiment closed before unmount");
+        }
+    }
 }
 
 export { jsPsych, Experiment };
