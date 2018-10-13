@@ -13,9 +13,7 @@ class Experiment extends Component {
         ];
 
         Object.assign(jsPsych.plugins, plugins, props.plugins);
-
-        console.log(jsPsych.plugins);
-
+        
         this.handleKeyEvent = e => {
             if (e.redispatched) {
                 return;
@@ -57,7 +55,6 @@ class Experiment extends Component {
         window.removeEventListener("keyup", this.handleKeyEvent, true);
         window.removeEventListener("keydown", this.handleKeyEvent, true);
         try {
-            console.log(jsPsych.progress());
             jsPsych.endExperiment("Ended Experiment");
         } catch (e) {
             console.log("Experiment closed before unmount");
