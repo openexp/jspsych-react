@@ -17,6 +17,7 @@ import iat_html from "jspsych/plugins/jspsych-iat-html.js"
 import iat_image from "jspsych/plugins/jspsych-iat-image.js"
 import image_keyboard_response from "jspsych/plugins/jspsych-image-keyboard-response.js"
 import image_slider_response from "jspsych/plugins/jspsych-image-slider-response.js"
+import image_button_response from "jspsych/plugins/jspsych-image-button-response.js"
 import instructions from "jspsych/plugins/jspsych-instructions.js"
 import reconstruction from "jspsych/plugins/jspsych-reconstruction.js"
 import resize from "jspsych/plugins/jspsych-resize.js"
@@ -51,6 +52,7 @@ const plugins = {
   iat_image,
   image_slider_response,
   image_keyboard_response,
+  image_button_response,
   instructions,
   reconstruction,
   resize,
