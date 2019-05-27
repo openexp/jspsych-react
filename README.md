@@ -32,7 +32,16 @@ export default class ExperimentComponent extends Component {
 }
 ```
 
-You can also import the jsPsych object to access other jsPsych functionality, such as updating the progress bar during a jsPsych experiment.
+You can also import the jsPsych object to access other jsPsych functionality, such as updating the progress bar during a jsPsych experiment. For example:
+
+```javascript
+import { jspsych } from "jspsych-react";
+
+export const updateProgress = () =>
+  jsPsych.setProgressBar(
+    jsPsych.progress().current_trial_global / jspsychObject.sample.size
+  );
+```
 
 # API
 
