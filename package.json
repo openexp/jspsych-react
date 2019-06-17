@@ -10,7 +10,7 @@
     "build:dev": "webpack src/experiment.js dist/experiment.js --config tools/webpack.config.dev.js",
     "build:prd": "webpack src/experiment.js dist/experiment.js --config tools/webpack.config.prd.js",
     "clean": "rimraf dist build",
-    "start": "node ./node_modules/webpack-dev-server/bin/webpack-dev-server.js",
+    "start": "node ./node_modules/webpack-dev-server/bin/webpack-dev-server.js"
   },
   "contributors": [
     "Teon L Brooks",
