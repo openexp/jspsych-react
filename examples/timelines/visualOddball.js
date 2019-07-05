@@ -19,7 +19,7 @@ const nontargetsDir = ".../assets/cat_dog/dogs/";
 // Oddball sampling function
 // Assumes first half of the trials are oddball stimuli
 // TODO: Make this autogenerate from reading dir
-const oddballSamplingFn = trials => {
+const oddballSamplingFunction = trials => {
   const trialOrder = new Array(params.n_trials).fill(0).map(() => {
     if (Math.random() > params.prob) {
       return Math.floor(
