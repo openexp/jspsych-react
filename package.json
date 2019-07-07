@@ -18,7 +18,7 @@
     "clean": "rimraf dist build"
   },
   "dependencies": {
-    "jspsych": "git://github.com/makebrainwaves/jspsych.git#jspsych-react@0.1.2",
+    "jspsych": "git://github.com/makebrainwaves/jspsych.git#modular",
     "react": "^0.14.3"
   },
   "devDependencies": {
