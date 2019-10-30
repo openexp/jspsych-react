@@ -1,6 +1,6 @@
 {
   "name": "jspsych-react",
-  "version": "0.3.0",
+  "version": "0.4.0",
   "description": "A React wrapper for jsPsych",
   "main": "dist/jspsych-react.js",
   "repository": "git@github.com:makebrainwaves/jspsych-react.git",

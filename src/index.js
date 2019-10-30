@@ -2,7 +2,7 @@ import React, { Component } from "react";
 import jsPsych from "jspsych";
 import plugins from "./plugins"; // load all built-in plugins
 
-class Experiment extends Component {
+class ExperimentWindow extends Component {
   constructor(props) {
     super(props);
     const default_timeline = [
@@ -36,7 +36,7 @@ class Experiment extends Component {
   render() {
     return (
       <div
-        id="experiment"
+        id="experimentWindow"
         style={{ height: this.height, width: this.width }}
         ref={e => {
           this.experimentDiv = e;
@@ -62,4 +62,4 @@ class Experiment extends Component {
   }
 }
 
-export { jsPsych, Experiment };
+export { jsPsych, ExperimentWindow };

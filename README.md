@@ -1,25 +1,25 @@
 <!-- Logo -->
 <p align="center">
-    <img width="400" src="https://raw.githubusercontent.com/makebrainwaves/jspsych-react/master/jspsych-react-logo.jpg">
+    <img width="400" src="./jspsych-react-logo.jpg">
 </p>
 
 # Getting Started
 
 `npm install jspsych-react`
 
-You can use the `Experiment` component to include a jsPsych experiment in your React project. For example:
+You can use the `ExperimentWindow` component to include a jsPsych experiment in your React project. For example:
 
 ```javascript
 import React, { Component } from 'react'
-import { Experiment } from "jspsych-react";
-import { visualOddball } from "./examples/timelines";
-import { callbackHTMLDisplay, callbackImageDisplay } from "./examples/plugins";
+import { ExperimentWindow } from "jspsych-react";
+import { visualOddball } from "./your_experiments/experiment_timeline";
+import { callbackHTMLDisplay, callbackImageDisplay } from "./custom_plugins/plugins";
 
-export default class ExperimentComponent extends Component {
+export default class ExperimentWindow extends Component {
   render() {
     return (
       <div>
-        <Experiment
+        <ExperimentWindow
           settings={{ timeline: visualOddball }}
           plugins={{
             "callback-html-display": callbackHTMLDisplay,
@@ -32,7 +32,7 @@ export default class ExperimentComponent extends Component {
 }
 ```
 
-You can also import the jsPsych object to access other jsPsych functionality, such as updating the progress bar during a jsPsych experiment. For example:
+You can also import the jsPsych object to access other jsPsych functionalities, such as updating the progress bar during a jsPsych experiment. For example:
 
 ```javascript
 import { jspsych } from "jspsych-react";
@@ -55,4 +55,4 @@ export const updateProgress = () =>
 | plugins  | `object` | `null`     | Custom plugins to be passed to jsPsych for use in the experiment. Object keys should match the names of the plugins referenced in the timeline.
 
 # License
-MIT © [Teon Brooks](http://teonbrooks.github.io/)
+MIT © [Teon L Brooks](https://teonian.com/)
