@@ -1,3 +1,13 @@
+# __ARCHIVE WARNING__
+
+This project was created to coordinate two things:
+
+1. use a forked tagged version of jspsych that was packaged (prior to official supported version)
+
+2. wrap jspsych in a React component as a window to be used with other projects
+
+`jspsych-react` was used in BrainWaves until [v0.9.0](https://github.com/makebrainwaves/BrainWaves/releases/tag/v0.9.0) where that project began using lab.js for its experiment presentation layer.
+
 <!-- Logo -->
 <p align="center">
     <img width="400" src="./jspsych-react-logo.jpg">
